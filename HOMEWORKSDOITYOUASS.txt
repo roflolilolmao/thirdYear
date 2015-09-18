@@ -1,6 +1,12 @@
+<!-- most important -->
+listen dozer
+fix HAX kernel module
+fix debian
+
 <!-- devoirs -->
 22 septembre installer openCV python
 23 septembre installer distrib linux
 l2p labo conception OS
+25 septembre compilateur exercices regex
 
 <!-- projects -->
