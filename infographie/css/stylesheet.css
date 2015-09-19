@@ -64,6 +64,7 @@ h3 img {
 }
 
 canvas {
+	float: right;
 	border: 0px solid #000000;
 	background-color: #EEEEEE;
 	margin: 10px auto;

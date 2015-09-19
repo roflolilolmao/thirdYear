@@ -43,16 +43,36 @@
 				prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
 				prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
 			}
+			var a = 0;
+			function drawTriangle(e, c, alpha){
+				var h = e * Math.sin(Math.PI / 3.0);
+				var b = e / 2.0 * Math.tan(Math.PI / 6.0);
+				var p = 0.165;
+				var ep = e * p;
+				var epp = e * (1.0 - p);
+				var beta =  Math.PI * 2.0 / 3.0 - Math.asin(ep / epp * Math.sin(Math.PI / 3.0));
+				var eb = epp * Math.sin(Math.PI / 3.0) / Math.sin(beta);
+				if (c > 0.1) drawTriangle(eb, c - 1.0 / 6.0, alpha + beta);
+				var x1 = 0.0;
+				var y1 = h - b;
+				var x2 = -e / 2.0;
+				var y2 = -b;
+				var x3 = e / 2.0;
+				var y3 = -b;
+				var m11 = Math.cos(alpha);
+				var m12 = -Math.sin(alpha);
+				var m21 = Math.sin(alpha);
+				var m22 = Math.cos(alpha);
+				vertices.push(x1 * m11 + y1 * m12, x1 * m21 + y1 * m22, 0.0);
+				vertices.push(x2 * m11 + y2 * m12, x2 * m21 + y2 * m22, 0.0);
+				vertices.push(x3 * m11 + y3 * m12, x3 * m21 + y3 * m22, 0.0);
+				colors.push(0.0, 0.0, 1.0, c);
+				colors.push(0.0, 0.0, 1.0, c);
+				colors.push(0.0, 0.0, 1.0, c);
+				indices.push(a++, a++, a++);
+			}
 			function initBuffers(){
-				vertices.push( -0.8,  0.8, 0.0);
-				vertices.push( 0.8,  0.8, 0.0);
-				vertices.push(-0.8, -0.8, 0.0);
-				vertices.push( 0.8, -0.8, 0.0);
-				colors.push(1.0, 0.0, 0.0, 1.0);
-				colors.push(0.0, 1.0, 0.0, 1.0);
-				colors.push(0.0, 0.0, 1.0, 1.0);
-				colors.push(0.0, 1.0, 1.0, 1.0);
-				indices.push(0, 1, 2, 3);
+				drawTriangle(1.6, 1.0, 0.0);
 				vertexBuffer = getVertexBufferWithVertices(vertices);
 				colorBuffer = getVertexBufferWithVertices(colors);
 				indexBuffer = getIndexBufferWithIndices(indices);
@@ -76,7 +96,7 @@
 				//ORDER
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
 				//SHAPE
-				glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+				glContext.drawElements(glContext.TRIANGLES, indices.length, glContext.UNSIGNED_SHORT,0);
 			}
 			function initWebGL(){
 				glContext = getGLContext('webgl-canvas');
