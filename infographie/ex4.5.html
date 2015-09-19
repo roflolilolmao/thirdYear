@@ -44,15 +44,8 @@
 				prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
 			}
 			var a = 0;
-			function drawTriangle(e, c, alpha){
-				var h = e * Math.sin(Math.PI / 3.0);
-				var b = e / 2.0 * Math.tan(Math.PI / 6.0);
-				var p = 0.165;
-				var ep = e * p;
-				var epp = e * (1.0 - p);
-				var beta =  Math.PI * 2.0 / 3.0 - Math.asin(ep / epp * Math.sin(Math.PI / 3.0));
-				var eb = epp * Math.sin(Math.PI / 3.0) / Math.sin(beta);
-				if (c > 0.1) drawTriangle(eb, c - 1.0 / 6.0, alpha + beta);
+			function drawTriangle(e, b, h, c, alpha)
+			{
 				var x1 = 0.0;
 				var y1 = h - b;
 				var x2 = -e / 2.0;
@@ -63,16 +56,28 @@
 				var m12 = -Math.sin(alpha);
 				var m21 = Math.sin(alpha);
 				var m22 = Math.cos(alpha);
-				vertices.push(x1 * m11 + y1 * m12, x1 * m21 + y1 * m22, 0.0);
-				vertices.push(x2 * m11 + y2 * m12, x2 * m21 + y2 * m22, 0.0);
-				vertices.push(x3 * m11 + y3 * m12, x3 * m21 + y3 * m22, 0.0);
+				vertices.push(x1 * m11 + y1 * m12, x1 * m21 + y1 * m22, c-1.0);
+				vertices.push(x2 * m11 + y2 * m12, x2 * m21 + y2 * m22, c-1.0);
+				vertices.push(x3 * m11 + y3 * m12, x3 * m21 + y3 * m22, c-1.0);
+			}
+			function drawTriangles(e, c, alpha){
+				var h = e * Math.sin(Math.PI / 3.0);
+				var b = e / 2.0 * Math.tan(Math.PI / 6.0);
+				//var p = 0.00525;
+				var p = 0.165
+				var ep = e * p;
+				var epp = e * (1.0 - p);
+				var beta =  Math.PI * 2.0 / 3.0 - Math.asin(ep / epp * Math.sin(Math.PI / 3.0));
+				var eb = epp * Math.sin(Math.PI / 3.0) / Math.sin(beta);
+				drawTriangle(e, b, h, c, alpha);
 				colors.push(0.0, 0.0, 1.0, c);
 				colors.push(0.0, 0.0, 1.0, c);
 				colors.push(0.0, 0.0, 1.0, c);
 				indices.push(a++, a++, a++);
+				if (c > 0.01) drawTriangles(eb, c - 1.0 / 6.0, alpha + beta);
 			}
 			function initBuffers(){
-				drawTriangle(1.6, 1.0, 0.0);
+				drawTriangles(1.6, 1.0, 0.0);
 				vertexBuffer = getVertexBufferWithVertices(vertices);
 				colorBuffer = getVertexBufferWithVertices(colors);
 				indexBuffer = getIndexBufferWithIndices(indices);
@@ -86,6 +91,7 @@
 				//HOW
 				mat4.identity(pMatrix);
 				mat4.identity(mvMatrix);
+				mat4.perspective(60, c_width / c_height, 0.1, 10000.0, pMatrix);
 				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
 				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
 				//WHAT
@@ -110,7 +116,7 @@
 		<br/>
 		Salut c'est un triangle
 		<br/>
-		<canvas id="webgl-canvas" width="500" height="500">
+		<canvas id="webgl-canvas" width="1000" height="1000">
 			HTML5 is not supported
 		</canvas>
 	</body>
