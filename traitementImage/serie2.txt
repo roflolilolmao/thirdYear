@@ -1,0 +1,21 @@
+ex1)
+a) 10*1000*1000 = 10^7
+b) 2^10
+c) 10^7 - 1000*1000*9 = 10^6
+d) 10^7 - 500*500*10 = 7.5*10^6
+ex2)
+a)
+nb bits/pixel = ceiling(log2(2000)) = 11
+300*500/0.1/0.1*11=1.65*10^8 bits ou 2.0625 * 10^7
+b) la fréquence d'échantillonage doit être 2 fois plus grande => 5pixel/mm
+ex3)
+a)
+schéma
+o<--20mm-->capteur[2cm/2cm]<--   5 mètres   -->objet[1m/(ligne1cm)]
+100 lignes / 4mm (cf b) mais 2 échantillons par ligne donc 200 échantillons / 4mm donc f = 50px*mm-1
+donc résolution = 50px/mm * 20mm x 50px/mm * 20mm = 1000px x 1000px
+b) h = 1m / 5m * 0.02m = 0.004m = 4mm
+c) f = 5m * 0.02m / 1m = 10cm
+ex4)
+		a)				b)
+mode	{31,20,10,0}	15
