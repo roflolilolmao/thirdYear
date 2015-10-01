@@ -44,6 +44,8 @@
 				prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
 			}
 			var a = 0;
+			var nbTriangles = 6.0;
+			var bool = false;
 			function drawTriangle(e, b, h, c, alpha)
 			{
 				var x1 = 0.0;
@@ -63,8 +65,8 @@
 			function drawTriangles(e, c, alpha){
 				var h = e * Math.sin(Math.PI / 3.0);
 				var b = e / 2.0 * Math.tan(Math.PI / 6.0);
-				//var p = 0.00525;
-				var p = 0.165
+				var p = Math.PI / 3.0 / nbTriangles;
+				//var p = 0.165
 				var ep = e * p;
 				var epp = e * (1.0 - p);
 				var beta =  Math.PI * 2.0 / 3.0 - Math.asin(ep / epp * Math.sin(Math.PI / 3.0));
@@ -74,7 +76,7 @@
 				colors.push(0.0, 0.0, 1.0, c);
 				colors.push(0.0, 0.0, 1.0, c);
 				indices.push(a++, a++, a++);
-				if (c > 0.01) drawTriangles(eb, c - 1.0 / 6.0, alpha + beta);
+				if (c > 0.01) drawTriangles(eb, c - 1.0 / nbTriangles, alpha + beta);
 			}
 			function initBuffers(){
 				drawTriangles(1.6, 1.0, 0.0);
@@ -82,18 +84,22 @@
 				colorBuffer = getVertexBufferWithVertices(colors);
 				indexBuffer = getIndexBufferWithIndices(indices);
 			}
-			var rot = 0.1;
-			var c = [0.25, 0];
+			var c = [0.13, 0.0];
 			function camera()
 			{
-				var r = 1;
-				var phi = 0.005;
+				var r = 1.0;
+				var phi = 0.015;
 				var xa = Math.cos(Math.PI * phi) * r;
 				var xb = Math.sin(Math.PI * phi) * r;
-				c[0] = c[0] * xa - c[1] * xb;
-				c[1] = c[0] * xb + c[1] * xa;
+				c[0] = (c[0] * xa - c[1] * xb);
+				c[1] = (c[0] * xb + c[1] * xa);
+				console.log(c[0] + " " + c[1]);
 				mat4.translate(mvMatrix, mvMatrix, [c[0], c[1], 0.0]);
-				mat4.rotate(mvMatrix, mvMatrix, rot, [-c[0], -c[1], 0.0]);
+				mat4.rotate(mvMatrix, mvMatrix, 0.1, [-c[0], -c[1], 0.0]);
+			}
+			function checkTest()
+			{
+				bool = !bool;
 			}
 			function drawScene(){
 				glContext.clearColor(0.1, 0.1, 0.1, 1.0);
@@ -104,7 +110,7 @@
 				//HOW
 				mat4.identity(pMatrix);
 				mat4.identity(mvMatrix);
-				camera();
+				if(bool)camera();
 				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
 				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
 				//WHAT
@@ -128,6 +134,8 @@
 	<body onload="initWebGL()">
 		<br/>
 		Salut c'est un triangle
+		<br/>
+		<input type="button" value="test" onclick="checkTest();"/>
 		<br/>
 		<canvas id="webgl-canvas" width="500" height="500">
 			HTML5 is not supported

@@ -19,3 +19,13 @@ c) f = 5m * 0.02m / 1m = 10cm
 ex4)
 		a)				b)
 mode	{31,20,10,0}	15
+histogramme
+ image a
+16 |x x  x   x
+0  +----
+	0 10 20 31
+ image b
+32 |   x
+16 |x	  x
+0  +----
+	10 15 20

@@ -1,0 +1,101 @@
+Created by PLY version 3.7 (http://www.dabeaz.com/ply)
+
+Grammar
+
+Rule 0     S' -> expression
+Rule 1     expression -> NUMBER
+Rule 2     expression -> expression ADD_OP expression
+Rule 3     expression -> expression MUL_OP expression
+
+Terminals, with rules where they appear
+
+ADD_OP               : 2
+MUL_OP               : 3
+NUMBER               : 1
+error                : 
+
+Nonterminals, with rules where they appear
+
+expression           : 2 2 3 3 0
+
+Parsing method: LALR
+
+state 0
+
+    (0) S' -> . expression
+    (1) expression -> . NUMBER
+    (2) expression -> . expression ADD_OP expression
+    (3) expression -> . expression MUL_OP expression
+
+    NUMBER          shift and go to state 2
+
+    expression                     shift and go to state 1
+
+state 1
+
+    (0) S' -> expression .
+    (2) expression -> expression . ADD_OP expression
+    (3) expression -> expression . MUL_OP expression
+
+    ADD_OP          shift and go to state 3
+    MUL_OP          shift and go to state 4
+
+
+state 2
+
+    (1) expression -> NUMBER .
+
+    ADD_OP          reduce using rule 1 (expression -> NUMBER .)
+    MUL_OP          reduce using rule 1 (expression -> NUMBER .)
+    $end            reduce using rule 1 (expression -> NUMBER .)
+
+
+state 3
+
+    (2) expression -> expression ADD_OP . expression
+    (1) expression -> . NUMBER
+    (2) expression -> . expression ADD_OP expression
+    (3) expression -> . expression MUL_OP expression
+
+    NUMBER          shift and go to state 2
+
+    expression                     shift and go to state 5
+
+state 4
+
+    (3) expression -> expression MUL_OP . expression
+    (1) expression -> . NUMBER
+    (2) expression -> . expression ADD_OP expression
+    (3) expression -> . expression MUL_OP expression
+
+    NUMBER          shift and go to state 2
+
+    expression                     shift and go to state 6
+
+state 5
+
+    (2) expression -> expression ADD_OP expression .
+    (2) expression -> expression . ADD_OP expression
+    (3) expression -> expression . MUL_OP expression
+
+    ADD_OP          reduce using rule 2 (expression -> expression ADD_OP expression .)
+    $end            reduce using rule 2 (expression -> expression ADD_OP expression .)
+    MUL_OP          shift and go to state 4
+
+  ! MUL_OP          [ reduce using rule 2 (expression -> expression ADD_OP expression .) ]
+  ! ADD_OP          [ shift and go to state 3 ]
+
+
+state 6
+
+    (3) expression -> expression MUL_OP expression .
+    (2) expression -> expression . ADD_OP expression
+    (3) expression -> expression . MUL_OP expression
+
+    ADD_OP          reduce using rule 3 (expression -> expression MUL_OP expression .)
+    $end            reduce using rule 3 (expression -> expression MUL_OP expression .)
+    MUL_OP          shift and go to state 4
+
+  ! MUL_OP          [ reduce using rule 3 (expression -> expression MUL_OP expression .) ]
+  ! ADD_OP          [ shift and go to state 3 ]
+

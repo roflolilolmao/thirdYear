@@ -1,16 +1,21 @@
 ﻿<!-- most important -->
 listen dozer
-fix HAX kernel module
 
 <!-- tests -->
 te1 QL 4 décembre
 te1 JEE 11 décembre
+crypto 9 décembre
 
 <!-- devoirs -->
+WEBGL S5
 install laravel
-29 septembre traitement d'image série 2
-22 septembre installer openCV python
 l2p labo conception OS
-25 septembre compilateur exercices regex
+webl chap 6 + ex5
 
 <!-- projects -->
+<p3>
+RISQUES
+<webgl>
+CDC
+<android>
+CDC

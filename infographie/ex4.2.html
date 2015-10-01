@@ -8,12 +8,12 @@
 		<script src="js/webglTools.js"></script>
 		<script id="shader-vs" type="x-shader/x-vertex">
 			attribute vec3 aVertexPosition;
-			//attribute vec4 aColor;
+			attribute vec4 aColor;
 			uniform mat4 uMVMatrix;
 			uniform mat4 uPMatrix;
-			//varying vec4 vColor;
+			varying vec4 vColor;
 			void main(void) {
-				//vColor = aColor;
+				vColor = aColor;
 				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
 			}
 		</script>
@@ -21,53 +21,40 @@
 			#ifdef GL_ES
 				precision highp float;
 			#endif
-			//varying vec4 vColor;
+			varying vec4 vColor;
 			void main(void) {
-				if(gl_FragCoord.x < 50.0 || gl_FragCoord.y < 50.0 || gl_FragCoord.x > 450.0 || gl_FragCoord.y > 450.0)
-				{
-					gl_FragColor = vec4(0.3, 0.0, 0.0, 1.0);
-				}
-				else
-				{
-					//int xTile = int(floor(gl_PointCoord.x * 5.0));
-					//int yTile = int(floor(gl_PointCoord.y * 5.0));
-					//float color = ((xTile + yTile) % 2) == 0 ? 0.0 : 1.0;
-					//cannot % must invent clever solution
-					float xTile = floor((gl_FragCoord.x - 50.0) / 40.0);
-					float yTile = floor((gl_FragCoord.y - 50.0) / 40.0);
-					float add = xTile + yTile;
-					float color = (add / 2.0 == floor(add / 2.0) ? 0.0 : 1.0);
-					gl_FragColor = vec4(color, color, color, 1.0);
-				}
+				gl_FragColor = vColor;
 			}
 		</script>
 		<script>
 			var vertexBuffer = null;
 			var indexBuffer = null;
-			//var colorBuffer = null;
+			var colorBuffer = null;
 			var indices = [];
 			var vertices = [];
-			//var colors = [];
+			var colors = [];
 			var mvMatrix = mat4.create();
 			var pMatrix = mat4.create();			
 			function initShaderParameters(prg){
 				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
 				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
-				//prg.colorAttribute = glContext.getAttribLocation(prg, "aColor");
-				//glContext.enableVertexAttribArray(prg.colorAttribute);
+				prg.colorAttribute = glContext.getAttribLocation(prg, "aColor");
+				glContext.enableVertexAttribArray(prg.colorAttribute);
 				prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
 				prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
 			}
 			function initBuffers(){
-				vertices.push(-1.0, -1.0, 0.0);
-				vertices.push(-1.0, 3.0, 0.0);
-				vertices.push(3.0, -1.0, 0.0);
-				//colors.push(1.0, 1.0, 1.0, 1.0);
-				//colors.push(1.0, 1.0, 1.0, 1.0);
-				//colors.push(1.0, 1.0, 1.0, 1.0);
-				indices.push(0,1,2);
+				vertices.push( 0.8, -0.8, 0.0);
+				vertices.push( 0.8,  0.8, 0.0);
+				vertices.push( -0.8, -0.8, 0.0);
+				vertices.push( -0.8, 0.8, 0.0);
+				colors.push(0.0, 0.0, 1.0, 0.2);
+				colors.push(0.0, 0.0, 1.0, 0.6);
+				colors.push(0.0, 0.0, 1.0, 1.0);
+				colors.push(0.0, 1.0, 1.0, 1.0);
+				indices.push(0, 1, 2, 3);
 				vertexBuffer = getVertexBufferWithVertices(vertices);
-				//colorBuffer = getVertexBufferWithVertices(colors);
+				colorBuffer = getVertexBufferWithVertices(colors);
 				indexBuffer = getIndexBufferWithIndices(indices);
 			}
 			function drawScene(){
@@ -84,12 +71,12 @@
 				//WHAT
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
 				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
-				//glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
-				//glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
+				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
 				//ORDER
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
 				//SHAPE
-				glContext.drawElements(glContext.TRIANGLES, indices.length, glContext.UNSIGNED_SHORT,0);
+				glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
 			}
 			function initWebGL(){
 				glContext = getGLContext('webgl-canvas');
