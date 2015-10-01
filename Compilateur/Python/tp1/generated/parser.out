@@ -3,99 +3,171 @@ Created by PLY version 3.7 (http://www.dabeaz.com/ply)
 Grammar
 
 Rule 0     S' -> expression
-Rule 1     expression -> NUMBER
-Rule 2     expression -> expression ADD_OP expression
-Rule 3     expression -> expression MUL_OP expression
+Rule 1     expression -> PAR_OPEN expression PAR_CLOSE
+Rule 2     expression -> NUMBER
+Rule 3     expression -> ADD_OP NUMBER
+Rule 4     expression -> expression ADD_OP expression
+Rule 5     expression -> expression MUL_OP expression
 
 Terminals, with rules where they appear
 
-ADD_OP               : 2
-MUL_OP               : 3
-NUMBER               : 1
+ADD_OP               : 3 4
+MUL_OP               : 5
+NUMBER               : 2 3
+PAR_CLOSE            : 1
+PAR_OPEN             : 1
 error                : 
 
 Nonterminals, with rules where they appear
 
-expression           : 2 2 3 3 0
+expression           : 1 4 4 5 5 0
 
 Parsing method: LALR
 
 state 0
 
     (0) S' -> . expression
-    (1) expression -> . NUMBER
-    (2) expression -> . expression ADD_OP expression
-    (3) expression -> . expression MUL_OP expression
+    (1) expression -> . PAR_OPEN expression PAR_CLOSE
+    (2) expression -> . NUMBER
+    (3) expression -> . ADD_OP NUMBER
+    (4) expression -> . expression ADD_OP expression
+    (5) expression -> . expression MUL_OP expression
 
-    NUMBER          shift and go to state 2
+    PAR_OPEN        shift and go to state 4
+    NUMBER          shift and go to state 3
+    ADD_OP          shift and go to state 2
 
     expression                     shift and go to state 1
 
 state 1
 
     (0) S' -> expression .
-    (2) expression -> expression . ADD_OP expression
-    (3) expression -> expression . MUL_OP expression
+    (4) expression -> expression . ADD_OP expression
+    (5) expression -> expression . MUL_OP expression
 
-    ADD_OP          shift and go to state 3
-    MUL_OP          shift and go to state 4
+    ADD_OP          shift and go to state 5
+    MUL_OP          shift and go to state 6
 
 
 state 2
 
-    (1) expression -> NUMBER .
+    (3) expression -> ADD_OP . NUMBER
 
-    ADD_OP          reduce using rule 1 (expression -> NUMBER .)
-    MUL_OP          reduce using rule 1 (expression -> NUMBER .)
-    $end            reduce using rule 1 (expression -> NUMBER .)
+    NUMBER          shift and go to state 7
 
 
 state 3
 
-    (2) expression -> expression ADD_OP . expression
-    (1) expression -> . NUMBER
-    (2) expression -> . expression ADD_OP expression
-    (3) expression -> . expression MUL_OP expression
+    (2) expression -> NUMBER .
 
-    NUMBER          shift and go to state 2
+    PAR_CLOSE       reduce using rule 2 (expression -> NUMBER .)
+    ADD_OP          reduce using rule 2 (expression -> NUMBER .)
+    MUL_OP          reduce using rule 2 (expression -> NUMBER .)
+    $end            reduce using rule 2 (expression -> NUMBER .)
 
-    expression                     shift and go to state 5
 
 state 4
 
-    (3) expression -> expression MUL_OP . expression
-    (1) expression -> . NUMBER
-    (2) expression -> . expression ADD_OP expression
-    (3) expression -> . expression MUL_OP expression
+    (1) expression -> PAR_OPEN . expression PAR_CLOSE
+    (1) expression -> . PAR_OPEN expression PAR_CLOSE
+    (2) expression -> . NUMBER
+    (3) expression -> . ADD_OP NUMBER
+    (4) expression -> . expression ADD_OP expression
+    (5) expression -> . expression MUL_OP expression
 
-    NUMBER          shift and go to state 2
+    PAR_OPEN        shift and go to state 4
+    NUMBER          shift and go to state 3
+    ADD_OP          shift and go to state 2
 
-    expression                     shift and go to state 6
+    expression                     shift and go to state 8
 
 state 5
 
-    (2) expression -> expression ADD_OP expression .
-    (2) expression -> expression . ADD_OP expression
-    (3) expression -> expression . MUL_OP expression
+    (4) expression -> expression ADD_OP . expression
+    (1) expression -> . PAR_OPEN expression PAR_CLOSE
+    (2) expression -> . NUMBER
+    (3) expression -> . ADD_OP NUMBER
+    (4) expression -> . expression ADD_OP expression
+    (5) expression -> . expression MUL_OP expression
 
-    ADD_OP          reduce using rule 2 (expression -> expression ADD_OP expression .)
-    $end            reduce using rule 2 (expression -> expression ADD_OP expression .)
-    MUL_OP          shift and go to state 4
+    PAR_OPEN        shift and go to state 4
+    NUMBER          shift and go to state 3
+    ADD_OP          shift and go to state 2
 
-  ! MUL_OP          [ reduce using rule 2 (expression -> expression ADD_OP expression .) ]
-  ! ADD_OP          [ shift and go to state 3 ]
-
+    expression                     shift and go to state 9
 
 state 6
 
-    (3) expression -> expression MUL_OP expression .
-    (2) expression -> expression . ADD_OP expression
-    (3) expression -> expression . MUL_OP expression
+    (5) expression -> expression MUL_OP . expression
+    (1) expression -> . PAR_OPEN expression PAR_CLOSE
+    (2) expression -> . NUMBER
+    (3) expression -> . ADD_OP NUMBER
+    (4) expression -> . expression ADD_OP expression
+    (5) expression -> . expression MUL_OP expression
 
-    ADD_OP          reduce using rule 3 (expression -> expression MUL_OP expression .)
-    $end            reduce using rule 3 (expression -> expression MUL_OP expression .)
-    MUL_OP          shift and go to state 4
+    PAR_OPEN        shift and go to state 4
+    NUMBER          shift and go to state 3
+    ADD_OP          shift and go to state 2
 
-  ! MUL_OP          [ reduce using rule 3 (expression -> expression MUL_OP expression .) ]
-  ! ADD_OP          [ shift and go to state 3 ]
+    expression                     shift and go to state 10
+
+state 7
+
+    (3) expression -> ADD_OP NUMBER .
+
+    PAR_CLOSE       reduce using rule 3 (expression -> ADD_OP NUMBER .)
+    ADD_OP          reduce using rule 3 (expression -> ADD_OP NUMBER .)
+    MUL_OP          reduce using rule 3 (expression -> ADD_OP NUMBER .)
+    $end            reduce using rule 3 (expression -> ADD_OP NUMBER .)
+
+
+state 8
+
+    (1) expression -> PAR_OPEN expression . PAR_CLOSE
+    (4) expression -> expression . ADD_OP expression
+    (5) expression -> expression . MUL_OP expression
+
+    PAR_CLOSE       shift and go to state 11
+    ADD_OP          shift and go to state 5
+    MUL_OP          shift and go to state 6
+
+
+state 9
+
+    (4) expression -> expression ADD_OP expression .
+    (4) expression -> expression . ADD_OP expression
+    (5) expression -> expression . MUL_OP expression
+
+    PAR_CLOSE       reduce using rule 4 (expression -> expression ADD_OP expression .)
+    ADD_OP          reduce using rule 4 (expression -> expression ADD_OP expression .)
+    $end            reduce using rule 4 (expression -> expression ADD_OP expression .)
+    MUL_OP          shift and go to state 6
+
+  ! MUL_OP          [ reduce using rule 4 (expression -> expression ADD_OP expression .) ]
+  ! ADD_OP          [ shift and go to state 5 ]
+
+
+state 10
+
+    (5) expression -> expression MUL_OP expression .
+    (4) expression -> expression . ADD_OP expression
+    (5) expression -> expression . MUL_OP expression
+
+    PAR_CLOSE       reduce using rule 5 (expression -> expression MUL_OP expression .)
+    ADD_OP          reduce using rule 5 (expression -> expression MUL_OP expression .)
+    MUL_OP          reduce using rule 5 (expression -> expression MUL_OP expression .)
+    $end            reduce using rule 5 (expression -> expression MUL_OP expression .)
+
+  ! ADD_OP          [ shift and go to state 5 ]
+  ! MUL_OP          [ shift and go to state 6 ]
+
+
+state 11
+
+    (1) expression -> PAR_OPEN expression PAR_CLOSE .
+
+    PAR_CLOSE       reduce using rule 1 (expression -> PAR_OPEN expression PAR_CLOSE .)
+    ADD_OP          reduce using rule 1 (expression -> PAR_OPEN expression PAR_CLOSE .)
+    MUL_OP          reduce using rule 1 (expression -> PAR_OPEN expression PAR_CLOSE .)
+    $end            reduce using rule 1 (expression -> PAR_OPEN expression PAR_CLOSE .)
 
