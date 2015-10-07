@@ -32,9 +32,12 @@
 			var indexBuffer = null;
 			var colorBuffer = null;
 			var indices = [];
+			var indices2 = [];
 			var vertices = [];
+			var vertices2 = [];
 			var colors = [];
 			var pointsColors = [];
+			var pointsColors2 = [];
 			var mvMatrix = mat4.create();
 			var pMatrix = mat4.create();
 			function initShaderParameters(prg){
@@ -60,13 +63,24 @@
 				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
 				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
 				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
 				glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+				
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, getVertexBufferWithVertices(pointsColors));
 				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
 				glContext.drawElements(glContext.POINTS, indices.length, glContext.UNSIGNED_SHORT, 0);
+				glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT, 0);
+				
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, getVertexBufferWithVertices(vertices2));
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0)
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, getVertexBufferWithVertices(pointsColors2));
+				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, getIndexBufferWithIndices(indices2));
+				glContext.drawElements(glContext.POINTS, indices2.length, glContext.UNSIGNED_SHORT, 0);
+				glContext.drawElements(glContext.LINE_STRIP, indices2.length, glContext.UNSIGNED_SHORT, 0);
 			}
 			function initWebGL(){
 				glContext = getGLContext('webgl-canvas');
@@ -86,7 +100,6 @@
 		</canvas>
 		<script>
 			var nbClics = 0;
-			var c = 0;
 			var oldX = 0;
 			var oldY = 0;
 			var oldoldX = 0;
@@ -97,7 +110,12 @@
 				var colorComponent = 1.0 * (indices.length % maxPoints) / (maxPoints - 1);
 				colors.push(colorComponent, colorComponent, colorComponent, 1);
 				pointsColors.push(1.0, 0.0, 0.0, 1.0);
-				console.log('v: ' + vertices + ' i: ' + indices + ' c: ' + colors);
+				indices.push(indices.length);
+			}
+			function addPointOnGLScene2(pX, pY) {
+				vertices2.push(pX, pY, 0);
+				pointsColors2.push(0.0, 0.0, 1.0, 1.0);
+				indices2.push(indices2.length);
 			}
 			var myCanvas = document.getElementById('webgl-canvas');
 			myCanvas.addEventListener('click', function(evt) {
@@ -105,28 +123,15 @@
 				var mousePos = getMousePos(myCanvas, evt);
 				var pX = (mousePos.x - myCanvas.width / 2.0) / myCanvas.width * 2.0;
 				var pY = (myCanvas.height / 2.0 - mousePos.y) / myCanvas.height * 2.0;
-				console.log('point: ' + pX + ',' + pY);
-				if(nbClics % 2 == 0)
+				if(nbClics > 2)
 				{
-					if(nbClics > 2)
-					{
-						addPointOnGLScene((oldoldX + pX) / 2, (oldoldY + pY) / 2);
-					}
+					addPointOnGLScene2((oldoldX + pX) / 2, (oldoldY + pY) / 2);
 				}
 				oldoldX = oldX;
 				oldoldY = oldY;
 				oldX = pX;
 				oldY = pY;
 				addPointOnGLScene(pX, pY);
-				if(nbClics % 2 == 0)
-				{
-					if(nbClics > 2)
-					{
-					indices.push(c++);
-					indices.push(c - 2);
-					}
-				}
-				indices.push(c++);
 				initBuffers();
 			}, false);
 			function getMousePos(myCanvas, evt) {

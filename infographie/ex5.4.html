@@ -14,6 +14,7 @@
 			varying vec4 vColor;
 			void main(void) {
 				vColor = aColor;
+				gl_PointSize = 5.0;
 				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
 			}
 		</script>
@@ -33,6 +34,7 @@
 			var indices = [];
 			var vertices = [];
 			var colors = [];
+			var lineColors = [];
 			var mvMatrix = mat4.create();
 			var pMatrix = mat4.create();			
 			function initShaderParameters(prg){
@@ -43,37 +45,38 @@
 				prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
 				prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
 			}
-			function addP(x, y, a, b, c){
+			function addP(x, y, r, g, b){
 				vertices.push(x, y, 0.0);
-				colors.push(a, b, c, 1.0);
+				colors.push(r, g, b, 1.0);
+				lineColors.push(1.0, 1.0, 1.0,1.0);
 				indices.push(indices.length);
 			}
 			function initBuffers(){
-				addP(-0.6, -0.2, 1.0, 0.0, 1.0);
-				addP(-0.4, -0.2, 1.0, 0.0, 1.0);		
-				addP(-0.6, 0.0, 1.0, 0.0, 1.0);		
+				addP(-0.9, -0.3, 1.0, 0.0, 1.0);
+				addP(-0.6, -0.3, 1.0, 0.0, 1.0);		
+				addP(-0.9, 0.0, 1.0, 0.0, 1.0);		
 			
-				addP(-0.4, 0.0, 1.0, 0.0, 0.0);
-				addP(-0.4, 0.2, 1.0, 0.0, 0.0);
-				addP(-0.2, 0.0, 1.0, 1.0, 0.0);
-				addP(-0.2, 0.2, 1.0, 1.0, 0.0);
+				addP(-0.6, 0.0, 1.0, 0.0, 0.0);
+				addP(-0.6, 0.3, 1.0, 0.0, 0.0);
+				addP(-0.3, 0.0, 1.0, 1.0, 0.0);
+				addP(-0.3, 0.3, 1.0, 1.0, 0.0);
 				
 				addP(0.0, 0.0, 0.0, 1.0, 0.0);
-				addP(0.0, 0.2, 0.0, 1.0, 0.0);
+				addP(0.0, 0.3, 0.0, 1.0, 0.0);
 				
-				addP(0.2, 0.0, 0.0, 1.0, 1.0);
-				addP(0.2, 0.2, 0.0, 1.0, 1.0);
+				addP(0.3, 0.0, 0.0, 1.0, 1.0);
+				addP(0.3, 0.3, 0.0, 1.0, 1.0);
 				
-				addP(0.4, 0.2, 0.0, 0.0, 1.0);
-				addP(0.2, 0.4, 0.0, 0.0, 1.0);
-				addP(0.4, 0.4, 0.0, 0.0, 1.0);
+				addP(0.6, 0.3, 0.0, 0.0, 1.0);
+				addP(0.3, 0.6, 0.0, 0.0, 1.0);
+				addP(0.6, 0.6, 0.0, 0.0, 1.0);
 				vertexBuffer = getVertexBufferWithVertices(vertices);
 				colorBuffer = getVertexBufferWithVertices(colors);
 				indexBuffer = getIndexBufferWithIndices(indices);
 			}
 			function drawScene(){
 				glContext.clearColor(0.1, 0.1, 0.1, 1.0);
-				glContext.enable(glContext.DEPTH_TEST);
+				//glContext.enable(glContext.DEPTH_TEST); //removed so that we see the lines
 				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
 				//WHERE
 				glContext.viewport(0, 0, c_width, c_height);
@@ -91,6 +94,11 @@
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
 				//SHAPE
 				glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+				
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, getVertexBufferWithVertices(lineColors));
+				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+				glContext.drawElements(glContext.POINTS, indices.length, glContext.UNSIGNED_SHORT,0);
+				glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
 			}
 			function initWebGL(){
 				glContext = getGLContext('webgl-canvas');
