@@ -5,9 +5,9 @@ _tabversion = '3.5'
 
 _lr_method = 'LALR'
 
-_lr_signature = 'F619662C92D62A62D1C9200A4716690D'
+_lr_signature = '6A3F1F6B0874B67256B8D7F9D2F51E63'
     
-_lr_action_items = {'ADD_OP':([1,2,5,6,],[3,-1,-2,-3,]),'MUL_OP':([1,2,5,6,],[4,-1,4,4,]),'$end':([1,2,5,6,],[0,-1,-2,-3,]),'NUMBER':([0,3,4,],[2,2,2,]),}
+_lr_action_items = {'MUL_OP':([1,4,7,8,9,10,11,],[6,-2,6,-3,6,-5,-1,]),'$end':([1,4,8,9,10,11,],[0,-2,-3,-4,-5,-1,]),'PAR_OPEN':([0,2,5,6,],[2,2,2,2,]),'PAR_CLOSE':([4,7,8,9,10,11,],[-2,11,-3,-4,-5,-1,]),'ADD_OP':([0,1,2,4,5,6,7,8,9,10,11,],[3,5,3,-2,3,3,5,-3,-4,-5,-1,]),'NUMBER':([0,2,3,5,6,],[4,4,8,4,4,]),}
 
 _lr_action = {}
 for _k, _v in _lr_action_items.items():
@@ -16,7 +16,7 @@ for _k, _v in _lr_action_items.items():
       _lr_action[_x][_k] = _y
 del _lr_action_items
 
-_lr_goto_items = {'expression':([0,3,4,],[1,5,6,]),}
+_lr_goto_items = {'expression':([0,2,5,6,],[1,7,9,10,]),}
 
 _lr_goto = {}
 for _k, _v in _lr_goto_items.items():
@@ -26,7 +26,9 @@ for _k, _v in _lr_goto_items.items():
 del _lr_goto_items
 _lr_productions = [
   ("S' -> expression","S'",1,None,None,None),
-  ('expression -> NUMBER','expression',1,'p_expression_num','parser1.py',9),
-  ('expression -> expression ADD_OP expression','expression',3,'p_expression_op','parser1.py',22),
-  ('expression -> expression MUL_OP expression','expression',3,'p_expression_op','parser1.py',23),
+  ('expression -> PAR_OPEN expression PAR_CLOSE','expression',3,'p_expression_par','parser2.py',9),
+  ('expression -> NUMBER','expression',1,'p_expression_num','parser2.py',14),
+  ('expression -> ADD_OP NUMBER','expression',2,'p_expression_unary_num','parser2.py',19),
+  ('expression -> expression ADD_OP expression','expression',3,'p_expression_op','parser2.py',36),
+  ('expression -> expression MUL_OP expression','expression',3,'p_expression_op','parser2.py',37),
 ]

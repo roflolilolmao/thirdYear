@@ -4,9 +4,11 @@ import ply.lex as lex
 __author__ = 'Quentin'
 
 
-tokens = ('NUMBER', 'ADD_OP', 'MUL_OP')
+tokens = ('NUMBER', 'ADD_OP', 'MUL_OP', 'PAR_OPEN', 'PAR_CLOSE')
 t_ADD_OP = r'\+|-'
 t_MUL_OP = r'\*|\/'
+t_PAR_OPEN = r'\('
+t_PAR_CLOSE = r'\)'
 
 
 def t_NUMBER(t):
