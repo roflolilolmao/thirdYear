@@ -1,0 +1,315 @@
+Created by PLY version 3.7 (http://www.dabeaz.com/ply)
+
+Grammar
+
+Rule 0     S' -> program
+Rule 1     program -> statement
+Rule 2     program -> statement SEMICOLON program
+Rule 3     statement -> expression
+Rule 4     statement -> assignement
+Rule 5     assignement -> IDENTIFIER EQUAL expression
+Rule 6     expression -> PAR_OPEN expression PAR_CLOSE
+Rule 7     expression -> NUMBER
+Rule 8     expression -> IDENTIFIER
+Rule 9     expression -> ADD_OP NUMBER
+Rule 10    expression -> expression ADD_OP expression
+Rule 11    expression -> expression MUL_OP expression
+
+Terminals, with rules where they appear
+
+ADD_OP               : 9 10
+EQUAL                : 5
+IDENTIFIER           : 5 8
+MUL_OP               : 11
+NUMBER               : 7 9
+PAR_CLOSE            : 6
+PAR_OPEN             : 6
+SEMICOLON            : 2
+error                : 
+
+Nonterminals, with rules where they appear
+
+assignement          : 4
+expression           : 3 5 6 10 10 11 11
+program              : 2 0
+statement            : 1 2
+
+Parsing method: LALR
+
+state 0
+
+    (0) S' -> . program
+    (1) program -> . statement
+    (2) program -> . statement SEMICOLON program
+    (3) statement -> . expression
+    (4) statement -> . assignement
+    (6) expression -> . PAR_OPEN expression PAR_CLOSE
+    (7) expression -> . NUMBER
+    (8) expression -> . IDENTIFIER
+    (9) expression -> . ADD_OP NUMBER
+    (10) expression -> . expression ADD_OP expression
+    (11) expression -> . expression MUL_OP expression
+    (5) assignement -> . IDENTIFIER EQUAL expression
+
+    PAR_OPEN        shift and go to state 1
+    NUMBER          shift and go to state 8
+    IDENTIFIER      shift and go to state 2
+    ADD_OP          shift and go to state 5
+
+    assignement                    shift and go to state 6
+    statement                      shift and go to state 7
+    expression                     shift and go to state 4
+    program                        shift and go to state 3
+
+state 1
+
+    (6) expression -> PAR_OPEN . expression PAR_CLOSE
+    (6) expression -> . PAR_OPEN expression PAR_CLOSE
+    (7) expression -> . NUMBER
+    (8) expression -> . IDENTIFIER
+    (9) expression -> . ADD_OP NUMBER
+    (10) expression -> . expression ADD_OP expression
+    (11) expression -> . expression MUL_OP expression
+
+    PAR_OPEN        shift and go to state 1
+    NUMBER          shift and go to state 8
+    IDENTIFIER      shift and go to state 10
+    ADD_OP          shift and go to state 5
+
+    expression                     shift and go to state 9
+
+state 2
+
+    (8) expression -> IDENTIFIER .
+    (5) assignement -> IDENTIFIER . EQUAL expression
+
+    ADD_OP          reduce using rule 8 (expression -> IDENTIFIER .)
+    MUL_OP          reduce using rule 8 (expression -> IDENTIFIER .)
+    SEMICOLON       reduce using rule 8 (expression -> IDENTIFIER .)
+    $end            reduce using rule 8 (expression -> IDENTIFIER .)
+    EQUAL           shift and go to state 11
+
+
+state 3
+
+    (0) S' -> program .
+
+
+
+state 4
+
+    (3) statement -> expression .
+    (10) expression -> expression . ADD_OP expression
+    (11) expression -> expression . MUL_OP expression
+
+    SEMICOLON       reduce using rule 3 (statement -> expression .)
+    $end            reduce using rule 3 (statement -> expression .)
+    ADD_OP          shift and go to state 12
+    MUL_OP          shift and go to state 13
+
+
+state 5
+
+    (9) expression -> ADD_OP . NUMBER
+
+    NUMBER          shift and go to state 14
+
+
+state 6
+
+    (4) statement -> assignement .
+
+    SEMICOLON       reduce using rule 4 (statement -> assignement .)
+    $end            reduce using rule 4 (statement -> assignement .)
+
+
+state 7
+
+    (1) program -> statement .
+    (2) program -> statement . SEMICOLON program
+
+    $end            reduce using rule 1 (program -> statement .)
+    SEMICOLON       shift and go to state 15
+
+
+state 8
+
+    (7) expression -> NUMBER .
+
+    ADD_OP          reduce using rule 7 (expression -> NUMBER .)
+    MUL_OP          reduce using rule 7 (expression -> NUMBER .)
+    SEMICOLON       reduce using rule 7 (expression -> NUMBER .)
+    $end            reduce using rule 7 (expression -> NUMBER .)
+    PAR_CLOSE       reduce using rule 7 (expression -> NUMBER .)
+
+
+state 9
+
+    (6) expression -> PAR_OPEN expression . PAR_CLOSE
+    (10) expression -> expression . ADD_OP expression
+    (11) expression -> expression . MUL_OP expression
+
+    PAR_CLOSE       shift and go to state 16
+    ADD_OP          shift and go to state 12
+    MUL_OP          shift and go to state 13
+
+
+state 10
+
+    (8) expression -> IDENTIFIER .
+
+    ADD_OP          reduce using rule 8 (expression -> IDENTIFIER .)
+    MUL_OP          reduce using rule 8 (expression -> IDENTIFIER .)
+    SEMICOLON       reduce using rule 8 (expression -> IDENTIFIER .)
+    $end            reduce using rule 8 (expression -> IDENTIFIER .)
+    PAR_CLOSE       reduce using rule 8 (expression -> IDENTIFIER .)
+
+
+state 11
+
+    (5) assignement -> IDENTIFIER EQUAL . expression
+    (6) expression -> . PAR_OPEN expression PAR_CLOSE
+    (7) expression -> . NUMBER
+    (8) expression -> . IDENTIFIER
+    (9) expression -> . ADD_OP NUMBER
+    (10) expression -> . expression ADD_OP expression
+    (11) expression -> . expression MUL_OP expression
+
+    PAR_OPEN        shift and go to state 1
+    NUMBER          shift and go to state 8
+    IDENTIFIER      shift and go to state 10
+    ADD_OP          shift and go to state 5
+
+    expression                     shift and go to state 17
+
+state 12
+
+    (10) expression -> expression ADD_OP . expression
+    (6) expression -> . PAR_OPEN expression PAR_CLOSE
+    (7) expression -> . NUMBER
+    (8) expression -> . IDENTIFIER
+    (9) expression -> . ADD_OP NUMBER
+    (10) expression -> . expression ADD_OP expression
+    (11) expression -> . expression MUL_OP expression
+
+    PAR_OPEN        shift and go to state 1
+    NUMBER          shift and go to state 8
+    IDENTIFIER      shift and go to state 10
+    ADD_OP          shift and go to state 5
+
+    expression                     shift and go to state 18
+
+state 13
+
+    (11) expression -> expression MUL_OP . expression
+    (6) expression -> . PAR_OPEN expression PAR_CLOSE
+    (7) expression -> . NUMBER
+    (8) expression -> . IDENTIFIER
+    (9) expression -> . ADD_OP NUMBER
+    (10) expression -> . expression ADD_OP expression
+    (11) expression -> . expression MUL_OP expression
+
+    PAR_OPEN        shift and go to state 1
+    NUMBER          shift and go to state 8
+    IDENTIFIER      shift and go to state 10
+    ADD_OP          shift and go to state 5
+
+    expression                     shift and go to state 19
+
+state 14
+
+    (9) expression -> ADD_OP NUMBER .
+
+    ADD_OP          reduce using rule 9 (expression -> ADD_OP NUMBER .)
+    MUL_OP          reduce using rule 9 (expression -> ADD_OP NUMBER .)
+    SEMICOLON       reduce using rule 9 (expression -> ADD_OP NUMBER .)
+    $end            reduce using rule 9 (expression -> ADD_OP NUMBER .)
+    PAR_CLOSE       reduce using rule 9 (expression -> ADD_OP NUMBER .)
+
+
+state 15
+
+    (2) program -> statement SEMICOLON . program
+    (1) program -> . statement
+    (2) program -> . statement SEMICOLON program
+    (3) statement -> . expression
+    (4) statement -> . assignement
+    (6) expression -> . PAR_OPEN expression PAR_CLOSE
+    (7) expression -> . NUMBER
+    (8) expression -> . IDENTIFIER
+    (9) expression -> . ADD_OP NUMBER
+    (10) expression -> . expression ADD_OP expression
+    (11) expression -> . expression MUL_OP expression
+    (5) assignement -> . IDENTIFIER EQUAL expression
+
+    PAR_OPEN        shift and go to state 1
+    NUMBER          shift and go to state 8
+    IDENTIFIER      shift and go to state 2
+    ADD_OP          shift and go to state 5
+
+    assignement                    shift and go to state 6
+    program                        shift and go to state 20
+    expression                     shift and go to state 4
+    statement                      shift and go to state 7
+
+state 16
+
+    (6) expression -> PAR_OPEN expression PAR_CLOSE .
+
+    ADD_OP          reduce using rule 6 (expression -> PAR_OPEN expression PAR_CLOSE .)
+    MUL_OP          reduce using rule 6 (expression -> PAR_OPEN expression PAR_CLOSE .)
+    SEMICOLON       reduce using rule 6 (expression -> PAR_OPEN expression PAR_CLOSE .)
+    $end            reduce using rule 6 (expression -> PAR_OPEN expression PAR_CLOSE .)
+    PAR_CLOSE       reduce using rule 6 (expression -> PAR_OPEN expression PAR_CLOSE .)
+
+
+state 17
+
+    (5) assignement -> IDENTIFIER EQUAL expression .
+    (10) expression -> expression . ADD_OP expression
+    (11) expression -> expression . MUL_OP expression
+
+    SEMICOLON       reduce using rule 5 (assignement -> IDENTIFIER EQUAL expression .)
+    $end            reduce using rule 5 (assignement -> IDENTIFIER EQUAL expression .)
+    ADD_OP          shift and go to state 12
+    MUL_OP          shift and go to state 13
+
+
+state 18
+
+    (10) expression -> expression ADD_OP expression .
+    (10) expression -> expression . ADD_OP expression
+    (11) expression -> expression . MUL_OP expression
+
+    ADD_OP          reduce using rule 10 (expression -> expression ADD_OP expression .)
+    SEMICOLON       reduce using rule 10 (expression -> expression ADD_OP expression .)
+    $end            reduce using rule 10 (expression -> expression ADD_OP expression .)
+    PAR_CLOSE       reduce using rule 10 (expression -> expression ADD_OP expression .)
+    MUL_OP          shift and go to state 13
+
+  ! MUL_OP          [ reduce using rule 10 (expression -> expression ADD_OP expression .) ]
+  ! ADD_OP          [ shift and go to state 12 ]
+
+
+state 19
+
+    (11) expression -> expression MUL_OP expression .
+    (10) expression -> expression . ADD_OP expression
+    (11) expression -> expression . MUL_OP expression
+
+    ADD_OP          reduce using rule 11 (expression -> expression MUL_OP expression .)
+    MUL_OP          reduce using rule 11 (expression -> expression MUL_OP expression .)
+    SEMICOLON       reduce using rule 11 (expression -> expression MUL_OP expression .)
+    $end            reduce using rule 11 (expression -> expression MUL_OP expression .)
+    PAR_CLOSE       reduce using rule 11 (expression -> expression MUL_OP expression .)
+
+  ! ADD_OP          [ shift and go to state 12 ]
+  ! MUL_OP          [ shift and go to state 13 ]
+
+
+state 20
+
+    (2) program -> statement SEMICOLON program .
+
+    $end            reduce using rule 2 (program -> statement SEMICOLON program .)
+

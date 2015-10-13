@@ -12,10 +12,6 @@
 			uniform mat4 uMVMatrix;
 			uniform mat4 uPMatrix;
 			varying vec4 vColor;
-			uniform vec2 uP0;
-			uniform vec2 uP1;
-			uniform vec2 uP2;
-			uniform vec2 uP3;
 			void main(void) {
 				vColor = aColor;
 				if (aVertexPosition.z != 0.0){
@@ -23,11 +19,7 @@
 					vColor = vec4(1.0, 0.0, 0.0, 1.0);
 					gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
 				}else{
-					float t = aVertexPosition.x;
-					float t1 = 1.0 - t;
-					vec2 B_t = uP0 * t * t * t + 3.0 * uP1 * t * t * t1 + 3.0 * uP2 * t * t1 * t1 + uP3 * t1 * t1 * t1;
-					vec3 newVertexPos = vec3(B_t, 0.0);
-					gl_Position = uPMatrix * uMVMatrix * vec4(newVertexPos, 1.0);
+					gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
 				}
 			}
 		</script>
@@ -41,7 +33,7 @@
 			}
 		</script>
 		<script>
-			var maxPoints = 20;
+			var maxPoints = 200;
 			window.onkeydown = checkKey;
 			var focusOnControlPoints = false;
 			var vertexBuffer = null;
@@ -108,19 +100,45 @@
 				glContext.enableVertexAttribArray(prg.colorAttribute);
 				prg.pMatrixUniform          = glContext.getUniformLocation(prg, 'uPMatrix');
 				prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
-				prg.p0Uniform         = glContext.getUniformLocation(prg, 'uP0');
-				prg.p1Uniform         = glContext.getUniformLocation(prg, 'uP1');
-				prg.p2Uniform         = glContext.getUniformLocation(prg, 'uP2');
-				prg.p3Uniform         = glContext.getUniformLocation(prg, 'uP3');
+			}
+			function pascal(i){ //i = depth
+				var coeff = [];
+				if(i > 0){
+					var coeffs = pascal(i - 1);
+					coeff[0] = 1;
+					coeff[i - 1] = 1;
+					for(var j = 1; j < i - 1; j++){
+						coeff[j] = coeffs[j] + coeffs[j - 1];
+					}
+				}
+				return coeff;
 			}
 			function initBuffers(){
 				indices = [];
 				vertices = [];
 				colors = [];
-				for (i = 0.0; i <= maxPoints; i++){
-					vertices.push(1.0/maxPoints * i, 0, 0);
+				var coeff = pascal(pointsIndices.length);
+				for (i = 0; i <= maxPoints; i++){
+					var t = i / maxPoints;
+					var t1 = 1.0 - t;
+					var sumx = 0.0;
+					var sumy = 0.0;
+					for(var k = 0; k < pointsIndices.length; k++){
+						var sumt = 1.0;
+						var sumt1 = 1.0;
+						for(var j = 0; j < k; j++){
+							sumt *= t;
+						}
+						for(var j = 0; j < pointsIndices.length - k - 1; j++){
+							sumt1 *= t1;
+						}
+						var sum = sumt * sumt1 * coeff[k];
+						sumx += sum * PointCoordinates[k * 3];
+						sumy += sum * PointCoordinates[k * 3 + 1];
+					}
+					vertices.push(sumx, sumy, 0.0);
 					indices.push(i);
-					colors.push(0.0, i/maxPoints, 0.0, 1.0);
+					colors.push(0.0, t, 0.0, 1.0);
 				}
 				vertexBuffer = getVertexBufferWithVertices(vertices);
 				indexBuffer = getIndexBufferWithIndices(indices);
@@ -164,24 +182,10 @@
 				mat4.identity(mvMatrix);
 				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
 				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
-				if (PointCoordinates.length == 12){
-					var p0 = [];
-					var p1 = [];
-					var p2 = [];
-					var p3 = [];
-					p0.push(PointCoordinates[0], PointCoordinates[1]);
-					p1.push(PointCoordinates[3], PointCoordinates[4]);
-					p2.push(PointCoordinates[6], PointCoordinates[7]);
-					p3.push(PointCoordinates[9], PointCoordinates[10]);
-					glContext.uniform2fv(prg.p0Uniform, p0);
-					glContext.uniform2fv(prg.p1Uniform, p1);
-					glContext.uniform2fv(prg.p2Uniform, p2);
-					glContext.uniform2fv(prg.p3Uniform, p3);
-				}
+				
 				if( PointCoordinates.length > 2 )
 				  drawControlPoints();
-				if( PointCoordinates.length == 12 )
-				  drawBezierCurve();
+				drawBezierCurve();
 			}
 			function initWebGL(){
 				glContext = getGLContext('webgl-canvas');
@@ -192,22 +196,12 @@
 		</script>
 	</head>
 	<body onload="initWebGL()">
-		<script>displayTitle("Ch.06 E.g.1 : Courbes quadratiques de Bezier", 1,1,1,1,1,1,1);</script>
-		<p>	Définir les trois points de contrôle en cliquant à trois endroits dans le canevas, puis pour modifier la courbe utiliser les touches suivantes :
-		<br>'-' ou '+' pour réduire ou augmenter la résolution de la courbe
-		<br>'a', 'w', 's' et 'd' pour bouger le point de contrôle central
-		<br>'t' pour changer l'apparence de la courbe de Bézier
-		</p>
 		<canvas id="webgl-canvas" width="500" height="500">
 			HTML5 is not supported
 		</canvas>
 	</body>
 	<script id='code-js' type="text/javascript">
-		function addPointOnGLScene(pX, pY){
-			if (PointCoordinates.length >= 12){
-				PointCoordinates = [];
-				pointsIndices = [];
-			}
+		function addPointOnGLScene(pX, pY){	
 			PointCoordinates.push(pX, pY, 0.5);
 			pointsIndices.push(pointsIndices.length);
 			initBuffers();
@@ -224,6 +218,7 @@
 			if (evt.button === 2){
 				PointCoordinates = [];
 				pointsIndices = [];
+				initBuffers();
 			} else {
 				var mousePos = getMousePos(canvas, evt);
 				var pX = (mousePos.x - canvas.width/2.0) / canvas.width * 2.0;

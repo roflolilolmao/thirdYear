@@ -4,11 +4,14 @@ import ply.lex as lex
 __author__ = 'Quentin'
 
 
-tokens = ('NUMBER', 'ADD_OP', 'MUL_OP', 'PAR_OPEN', 'PAR_CLOSE')
+tokens = ('NUMBER', 'ADD_OP', 'MUL_OP', 'PAR_OPEN', 'PAR_CLOSE', 'SEMICOLON', 'IDENTIFIER', 'EQUAL')
 t_ADD_OP = r'\+|-'
 t_MUL_OP = r'\*|\/'
 t_PAR_OPEN = r'\('
 t_PAR_CLOSE = r'\)'
+t_SEMICOLON = r';'
+t_IDENTIFIER = r'[A-Za-z]([A-Za-z0-9]*_?)*'
+t_EQUAL = r'='
 
 
 def t_NUMBER(t):

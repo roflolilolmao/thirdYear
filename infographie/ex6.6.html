@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec4 aColor;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			varying vec4 vColor;
+			uniform vec3 uP0;
+			uniform vec3 uP1;
+			uniform vec3 uP2;
+			uniform vec3 uP3;
+			uniform vec3 uP4;
+			uniform vec3 uP5;
+			uniform vec3 uP6;
+			uniform vec3 uP7;
+			uniform vec3 uP8;
+			uniform vec3 uP9;
+			void main(void) {
+				float t = aVertexPosition.x;
+				float u = aVertexPosition.y;
+				float t1 = 1.0 - t;
+				float u1 = 1.0 - u;
+				vec3 r0 = uP0 * t * t + 2.0 * t * t1 * uP1 + t1 * t1 * uP2;
+				vec3 r1 = uP3 * t * t + 2.0 * t * t1 * uP4 + t1 * t1 * uP5;
+				vec3 r2 = uP6 * t * t + 2.0 * t * t1 * uP7 + t1 * t1 * uP8;
+				vec3 c0 = uP0 * u * u + 2.0 * u * u1 * uP3 + u1 * u1 * uP6;
+				vec3 c1 = uP1 * u * u + 2.0 * u * u1 * uP4 + u1 * u1 * uP7;
+				vec3 c2 = uP2 * u * u + 2.0 * u * u1 * uP5 + u1 * u1 * uP7;
+				vec3 B_t = (r0 + r1 + r2 + c1 + c2 + c0) / 6.0;
+				vColor = aColor;
+				gl_Position = uPMatrix * uMVMatrix * vec4(B_t, 1.0);
+				
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+				precision highp float;
+			#endif
+			varying vec4 vColor;
+			void main(void) {
+				gl_FragColor = vColor;
+			}
+		</script>
+		<script>
+			
+			var maxPoints = 20.0;
+			var numberLines = 3.0;
+			var vertexBuffer = null;
+			var indexBuffer = null;
+			var colorBuffer = null;
+			var indices = [];
+			var vertices = [];
+			var colors = [];
+			var controlPoints = [];
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();
+			mat4.identity(mvMatrix);
+			mat4.identity(pMatrix);
+			function initShaderParameters(prg){
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				prg.colorAttribute = glContext.getAttribLocation(prg, "aColor");
+				glContext.enableVertexAttribArray(prg.colorAttribute);
+				prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
+				prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
+				prg.p0 = glContext.getUniformLocation(prg, 'uP0');				
+				prg.p1 = glContext.getUniformLocation(prg, 'uP1');				
+				prg.p2 = glContext.getUniformLocation(prg, 'uP2');				
+				prg.p3 = glContext.getUniformLocation(prg, 'uP3');				
+				prg.p4 = glContext.getUniformLocation(prg, 'uP4');				
+				prg.p5 = glContext.getUniformLocation(prg, 'uP5');				
+				prg.p6 = glContext.getUniformLocation(prg, 'uP6');				
+				prg.p7 = glContext.getUniformLocation(prg, 'uP7');				
+				prg.p8 = glContext.getUniformLocation(prg, 'uP8');				
+				prg.p9 = glContext.getUniformLocation(prg, 'uP9');				
+			}
+			function initBuffers(){
+				indices = [];
+				vertices = [];
+				colors = [];
+				controlPoints = [];
+				
+				var p0 = [-0.5, -0.5, 0.0];
+				var p1 = [-0.5, 0.0, 0.0];
+				var p2 = [-0.5, 0.5, 0.0];
+			
+				var p3 = [0.0, -0.5, 0.0];
+				var p4 = [0.0, 0.0, 0.5];
+				var p5 = [0.0, 0.5, 0.0];
+				
+				var p6 = [0.5, -0.5, 0.0];
+				var p7 = [0.5, 0.0, 0.0];
+				var p8 = [0.5, 0.5, 0.0];
+				
+				glContext.uniform3fv(prg.p0, p0);
+				glContext.uniform3fv(prg.p1, p1);
+				glContext.uniform3fv(prg.p2, p2);
+				glContext.uniform3fv(prg.p3, p3);
+				glContext.uniform3fv(prg.p4, p4);
+				glContext.uniform3fv(prg.p5, p5);
+				glContext.uniform3fv(prg.p6, p6);
+				glContext.uniform3fv(prg.p7, p7);
+				glContext.uniform3fv(prg.p8, p8);
+				
+				vertexBuffer = getVertexBufferWithVertices(vertices);
+				indexBuffer = getIndexBufferWithIndices(indices);
+				colorBuffer = getVertexBufferWithVertices(colors);
+			}
+			function drawBezier(){
+				vertices = [];
+				indices = [];
+				colors = [];
+				for(var j = 0.0; j <= maxPoints; j++){
+					for(var i = 0.0; i <= maxPoints; i++)
+					{
+						var t = i / maxPoints;
+						var u = i / maxPoints;
+						var t1 = 1.0 - t;
+						vertices.push(t, u, 0.0);
+						indices.push(indices.length);
+						colors.push(t, u, 0.0, 1.0);
+					}
+				}
+			
+				vertexBuffer = getVertexBufferWithVertices(vertices);
+				indexBuffer = getIndexBufferWithIndices(indices);
+				colorBuffer = getVertexBufferWithVertices(colors);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
+				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+				glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+			}
+			function drawScene(){
+				glContext.clearColor(0.9, 0.9, 1.0, 1.0);
+				glContext.enable(glContext.DEPTH_TEST);
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				glContext.viewport(0, 0, c_width, c_height);
+				
+				mat4.perspective(pMatrix, degToRad(60.0), c_width / c_height, 0.1, 10000.0);
+				translationMat = mat4.create();
+				mat4.identity(translationMat);
+				mat4.translate(translationMat, translationMat, [0.0, 0.0, -1.0]);
+				rotateModelViewMatrixUsingQuaternion();
+				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				mvtMatrix = mat4.create();
+				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mat4.multiply(mvtMatrix, translationMat, mvMatrix));
+				mat4.identity(mvMatrix);
+				for(var u = 0; u <= numberLines; u++){
+					var i = 9 * u;
+					//drawBezier(controlPoints.slice(i, i + 3), controlPoints.slice(i + 3, i + 6), controlPoints.slice(i + 6, i + 9));
+				}
+				for(var u = 0; u <= numberLines; u++){
+					var i = 3 * u;
+					//drawBezier(controlPoints.slice(i, i + 3), controlPoints.slice(i + 9, i + 12), controlPoints.slice(i + 18, i + 21));
+				}	drawBezier();
+			}
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				initProgram();
+				initBuffers();
+				renderLoop();
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+	</body>
+	<script src='./js/mouseMotionHandling.js'></script>
+</html>

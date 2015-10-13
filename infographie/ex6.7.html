@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec4 aColor;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			varying vec4 vColor;
+			void main(void) {
+				vColor = aColor;
+				float t = aVertexPosition.x;
+				float x = sin(t) + 2.0 * sin(2.0 * t);
+				float y = cos(t) - 2.0 * cos(2.0 * t);
+				float z = - sin(3.0 * t);
+				gl_Position = uPMatrix * uMVMatrix * vec4(x / 3.0, y / 3.0, z / 3.0, 1.0);
+				
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+				precision highp float;
+			#endif
+			varying vec4 vColor;
+			void main(void) {
+				gl_FragColor = vColor;
+			}
+		</script>
+		<script>
+			var maxPoints = 500;
+			var vertexBuffer = null;
+			var indexBuffer = null;
+			var colorBuffer = null;
+			var indices = [];
+			var vertices = [];
+			var colors = [];
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();
+			mat4.identity(mvMatrix);
+			mat4.identity(pMatrix);
+			function initShaderParameters(prg){
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				prg.colorAttribute 			= glContext.getAttribLocation(prg, "aColor");
+				glContext.enableVertexAttribArray(prg.colorAttribute);
+				prg.pMatrixUniform          = glContext.getUniformLocation(prg, 'uPMatrix');
+				prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
+			}
+			function initBuffers(){
+				indices = [];
+				vertices = [];
+				colors = [];
+				for (i = 0.0; i <= maxPoints; i++){
+					vertices.push(2.0 * Math.PI / maxPoints * i, 0, 0);
+					indices.push(i);
+					colors.push(0.0, i/maxPoints, 0.0, 1.0);
+				}
+				vertexBuffer = getVertexBufferWithVertices(vertices);
+				indexBuffer = getIndexBufferWithIndices(indices);
+				colorBuffer = getVertexBufferWithVertices(colors);
+			}
+			function drawScene(){
+				glContext.clearColor(0.9, 0.9, 1.0, 1.0);
+				glContext.enable(glContext.DEPTH_TEST);
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				glContext.viewport(0, 0, c_width, c_height);
+				
+				mat4.perspective(pMatrix, degToRad(60.0), c_width / c_height, 0.1, 10000.0);
+				translationMat = mat4.create();
+				mat4.identity(translationMat);
+				mat4.translate(translationMat, translationMat, [0.0, 0.0, -2.0]);
+				rotateModelViewMatrixUsingQuaternion();
+				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				mvtMatrix = mat4.create();
+				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mat4.multiply(mvtMatrix, translationMat, mvMatrix));
+				mat4.identity(mvMatrix);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
+				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+				glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+			}
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				initProgram();
+				initBuffers();
+				renderLoop();
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+	</body>
+	<script src='./js/mouseMotionHandling.js'></script>
+</html>

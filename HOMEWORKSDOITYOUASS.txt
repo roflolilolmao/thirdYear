@@ -1,5 +1,5 @@
 ﻿<!-- most important -->
-listen dozer
+listen dozer ghost things 
 
 <!-- tests -->
 te1 QL 4 décembre
@@ -7,15 +7,10 @@ te1 JEE 11 décembre
 crypto 9 décembre
 
 <!-- devoirs -->
-WEBGL S5
-install laravel
 l2p labo conception OS
-webl chap 6 + ex5
 
 <!-- projects -->
 <p3>
-RISQUES
 <webgl>
-CDC
 <android>
 CDC

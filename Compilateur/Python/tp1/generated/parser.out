@@ -1,5 +1,11 @@
 Created by PLY version 3.7 (http://www.dabeaz.com/ply)
 
+Unused terminals:
+
+    IDENTIFIER
+    EQUAL
+    SEMICOLON
+
 Grammar
 
 Rule 0     S' -> expression
@@ -12,10 +18,13 @@ Rule 5     expression -> expression MUL_OP expression
 Terminals, with rules where they appear
 
 ADD_OP               : 3 4
+EQUAL                : 
+IDENTIFIER           : 
 MUL_OP               : 5
 NUMBER               : 2 3
 PAR_CLOSE            : 1
 PAR_OPEN             : 1
+SEMICOLON            : 
 error                : 
 
 Nonterminals, with rules where they appear
@@ -34,8 +43,8 @@ state 0
     (5) expression -> . expression MUL_OP expression
 
     PAR_OPEN        shift and go to state 2
-    NUMBER          shift and go to state 4
-    ADD_OP          shift and go to state 3
+    NUMBER          shift and go to state 3
+    ADD_OP          shift and go to state 4
 
     expression                     shift and go to state 1
 
@@ -59,19 +68,12 @@ state 2
     (5) expression -> . expression MUL_OP expression
 
     PAR_OPEN        shift and go to state 2
-    NUMBER          shift and go to state 4
-    ADD_OP          shift and go to state 3
+    NUMBER          shift and go to state 3
+    ADD_OP          shift and go to state 4
 
     expression                     shift and go to state 7
 
 state 3
-
-    (3) expression -> ADD_OP . NUMBER
-
-    NUMBER          shift and go to state 8
-
-
-state 4
 
     (2) expression -> NUMBER .
 
@@ -79,6 +81,13 @@ state 4
     MUL_OP          reduce using rule 2 (expression -> NUMBER .)
     $end            reduce using rule 2 (expression -> NUMBER .)
     PAR_CLOSE       reduce using rule 2 (expression -> NUMBER .)
+
+
+state 4
+
+    (3) expression -> ADD_OP . NUMBER
+
+    NUMBER          shift and go to state 8
 
 
 state 5
@@ -91,8 +100,8 @@ state 5
     (5) expression -> . expression MUL_OP expression
 
     PAR_OPEN        shift and go to state 2
-    NUMBER          shift and go to state 4
-    ADD_OP          shift and go to state 3
+    NUMBER          shift and go to state 3
+    ADD_OP          shift and go to state 4
 
     expression                     shift and go to state 9
 
@@ -106,8 +115,8 @@ state 6
     (5) expression -> . expression MUL_OP expression
 
     PAR_OPEN        shift and go to state 2
-    NUMBER          shift and go to state 4
-    ADD_OP          shift and go to state 3
+    NUMBER          shift and go to state 3
+    ADD_OP          shift and go to state 4
 
     expression                     shift and go to state 10
 
