@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec4 aColor;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			varying vec4 vColor;
+			void main(void) 
+			{
+				vColor = aColor;
+				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+				precision highp float;
+			#endif
+			varying vec4 vColor;
+			void main(void)
+			{
+				gl_FragColor = vColor;
+			}
+		</script>
+		<script>
+			var numberLines = 64.0;
+			var temp = [];
+			for(var i = 0; i <= numberLines; i++)
+			{
+				temp[i] = [];
+				for(var j = 0; j <= numberLines; j++)
+					temp[i][j] = -2;
+			}
+			var vertexBuffer = null;
+			var indexBuffer = null;
+			var colorBuffer = null;
+			var indices = [];
+			var vertices = [];
+			var colors = [];
+			var surfacePoints = [];
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();
+			var mode = 2;
+			mat4.identity(mvMatrix);
+			mat4.identity(pMatrix);
+			function initShaderParameters(prg)
+			{
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				prg.colorAttribute = glContext.getAttribLocation(prg, "aColor");
+				glContext.enableVertexAttribArray(prg.colorAttribute);
+				prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
+				prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
+			}
+			function z(average, range)
+			{
+				return average + range * (Math.random() * 1.5 - 1.0);
+			}
+			function midPoint(x0, xn, y0, yn, range)
+			{
+				var average = (temp[x0][y0] + temp[x0][yn] + temp[xn][y0] + temp[xn][yn]) / 4.0;
+				var xm = (x0 + xn) / 2;
+				var ym = (y0 + yn) / 2;
+				temp[xm][ym] = z(average, range);
+				if(temp[x0][ym] == -2) temp[x0][ym] = z(average, range);
+				if(temp[xn][ym] == -2) temp[xn][ym] = z(average, range);
+				if(temp[xm][y0] == -2) temp[xm][y0] = z(average, range);
+				if(temp[xm][yn] == -2) temp[xm][yn] = z(average, range);
+				
+				if ((xn - x0 > 2) && (yn - y0 > 2))
+				{
+					midPoint(x0, xm, y0, ym, range / 2.0);
+					midPoint(x0, xm, ym, yn, range / 2.0);
+					midPoint(xm, xn, y0, ym, range / 2.0);
+					midPoint(xm, xn, ym, yn, range / 2.0);
+				}
+			}
+			function initBuffers()
+			{
+				//source: https://code.google.com/p/fractalterraingeneration/wiki/Midpoint_Displacement
+				indices = [];
+				vertices = [];
+				colors = [];
+				surfacePoints = [];
+				
+				temp = [];
+				for(var i = 0; i <= numberLines; i++)
+				{
+					temp[i] = [];
+					for(var j = 0; j <= numberLines; j++)
+						temp[i][j] = -2;
+				}
+					
+				temp[numberLines][numberLines] = Math.random() * 1.5 - 0.5;
+				temp[0][numberLines] = Math.random() * 1.5 - 0.5;
+				temp[numberLines][0] = Math.random() * 1.5 - 0.5;
+				temp[0][0] = Math.random() * 1.5 - 0.5;
+				
+				midPoint(0, numberLines, 0, numberLines, 0.16);				
+				
+				for(var u = 0.0; u <= numberLines; u++){
+					for(var v = 0.0; v <= numberLines; v++){
+						var j = u / numberLines;
+						var k = v / numberLines;
+						var z = temp[u][v];
+						surfacePoints.push(j * 2.0 - 1.0, k * 2.0 - 1.0, z < 0.0 ? 0.0 : z);
+						if(z < -0.1)
+						{
+							colors.push(0.1 + z, 0.1 + z, 0.9 + z, 1.0);
+						}
+						else if (z < -0.05)
+						{
+							colors.push(0.4 + z, 0.4 + z, 1.0, 1.0);
+						}
+						else if (z < 0.0)
+						{
+							colors.push(0.6 + z, 0.6 + z, 1.0, 1.0);
+						}
+						else if (z < 0.1)
+						{
+							colors.push(0.1 + z, 0.8 + z, 0.1 + z, 1.0);
+						}
+						else if (z < 0.2)
+						{
+							colors.push(0.1 + z, 0.7 + z, 0.1 + z, 1.0);
+						}
+						else if (z < 0.3)
+						{
+							colors.push(0.3 + z, 0.3 + z, 0.0 + z, 1.0);
+						}
+						else if (z < 0.4)
+						{
+							colors.push(0.4 + z, 0.4 + z, 0.4 + z, 1.0);
+						}
+						else
+						{
+							colors.push(0.5 + z, 0.5 + z, 0.5 + z, 1.0);
+						}
+					}
+				}
+				
+				vertexBuffer = getVertexBufferWithVertices(vertices);
+				indexBuffer = getIndexBufferWithIndices(indices);
+				colorBuffer = getVertexBufferWithVertices(colors);
+			}
+			function drawSurface()
+			{
+				vertices = [];
+				indices = [];
+				vertices = surfacePoints;
+				if (mode == 1 || mode == 2)
+				for (var j = 0; j < numberLines; j++)
+				{
+					indices = [];
+					for(var i = 0; i <= numberLines; i++)
+					{
+						indices.push(i + j * (numberLines + 1));
+						indices.push(i + j * (numberLines + 1) + numberLines + 1);
+					}
+					if (mode == 2)
+						drawLine(glContext.TRIANGLE_STRIP);
+					if (mode == 1)
+						drawLine(glContext.LINE_STRIP);
+				}
+				if (mode == 0)
+				for (var j = 0; j <= numberLines; j++)
+				{
+					indices = [];
+					for(var i = 0; i <= numberLines; i++)
+					{
+						indices.push(i + j * (numberLines + 1));
+					}
+					drawLine(glContext.LINE_STRIP);
+				}
+				if (mode == 0)
+				for (var j = 0; j <= numberLines; j++)
+				{
+					indices = [];
+					for(var i = 0; i <= numberLines; i++)
+					{
+						indices.push(j + i * (numberLines + 1));
+					}
+					drawLine(glContext.LINE_STRIP);
+				}
+			}
+			function drawLine(drawMode)
+			{
+				vertexBuffer = getVertexBufferWithVertices(vertices);
+				indexBuffer = getIndexBufferWithIndices(indices);
+				colorBuffer = getVertexBufferWithVertices(colors);
+				
+				glContext.uniform1i(prg.mode, 0);
+				
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
+				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+				
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+				glContext.drawElements(drawMode, indices.length, glContext.UNSIGNED_SHORT,0);
+			}
+			function drawScene()
+			{
+				glContext.clearColor(0.9, 0.9, 1.0, 1.0);
+				glContext.enable(glContext.DEPTH_TEST);
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				glContext.viewport(0, 0, c_width, c_height);
+				
+				mat4.perspective(pMatrix, degToRad(60.0), c_width / c_height, 0.1, 10000.0);
+				translationMat = mat4.create();
+				mat4.identity(translationMat);
+				mat4.translate(translationMat, translationMat, [0.0, 0.0, -2.5]);
+				rotateModelViewMatrixUsingQuaternion();
+				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				mvtMatrix = mat4.create();
+				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mat4.multiply(mvtMatrix, translationMat, mvMatrix));
+				mat4.identity(mvMatrix);
+				
+				drawSurface();
+			}
+			function initWebGL()
+			{
+				glContext = getGLContext('webgl-canvas');
+				initProgram();
+				initBuffers();
+				renderLoop();
+			}
+			function squares()
+			{
+				mode = 0;
+			}
+			function triangles()
+			{
+				mode = 1;
+			}
+			function surface()
+			{
+				mode = 2;
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()" style="padding: 2%">
+		<br/>
+		<button onclick="triangles()">triangles</button>
+		<button onclick="surface()">surface</button>
+		<button onclick="squares()">squares</button>
+		<br/>
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+	</body>
+	<script src='./js/mouseMotionHandling.js'></script>
+</html>

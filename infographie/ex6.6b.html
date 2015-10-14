@@ -73,7 +73,7 @@
 			var wave = 0.5;
 			var waveC = 2.0;
 			var waveBool = false;
-			var maxPoints = 20.0;
+			var mode = 0;
 			var numberLines = 25.0;
 			var vertexBuffer = null;
 			var indexBuffer = null;
@@ -171,54 +171,57 @@
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
 				glContext.drawElements(glContext.POINTS, indices.length, glContext.UNSIGNED_SHORT,0);
 			}
-			function rows(u)
-			{
-				for(var i = 0.0; i <= maxPoints; i++)
-				{
-					var t = i / maxPoints;
-					vertices.push(t, u, 0.0);
-					colors.push(t, 0.0, u, 1.0);
-				}
-			}
-			function columns(t)
-			{
-				for(var i = 0.0; i <= maxPoints; i++)
-				{
-					var u = i / maxPoints;
-					vertices.push(t, u, 0.0);
-					colors.push(t, 0.0, u, 1.0);
-				}
-			}
 			function drawSurface()
-			{
-				for(var u = 0.0; u <= numberLines; u++){
-					var j = u / numberLines * (p6[0] - p0[0]);
-					drawBezier(j, true);
-				}
-				for(var t = 0.0; t <= numberLines; t++){
-					var j = t / numberLines * (p6[0] - p0[0]);
-					drawBezier(j, false);
-				}
-			}
-			function drawBezier(x, colorrow)
 			{
 				vertices = [];
 				indices = [];
 				colors = [];
 				
-				if(colorrow)
-				{
-					rows(x);
+				for(var u = 0.0; u <= numberLines; u++){
+					for(var v = 0.0; v <= numberLines; v++){
+						var j = u / numberLines * (p6[0] - p0[0]);
+						var k = v / numberLines * (p2[1] - p0[1]);
+						vertices.push(j, k, 0.0);
+						colors.push(j, 0.0, k, 1.0);
+					}
 				}
-				else
+				if (mode == 1 || mode == 2)
+				for (var j = 0; j < numberLines; j++)
 				{
-					columns(x);
+					indices = [];
+					for(var i = 0; i <= numberLines; i++)
+					{
+						indices.push(i + j * (numberLines + 1));
+						indices.push(i + j * (numberLines + 1) + numberLines + 1);
+					}
+					if (mode == 2)
+						drawBezier(glContext.TRIANGLE_STRIP);
+					if (mode == 1)
+						drawBezier(glContext.LINE_STRIP);
 				}
-				for(var i = 0; i <= maxPoints; i++)
+				if (mode == 0)
+				for (var j = 0; j <= numberLines; j++)
 				{
-					indices.push(i);
+					indices = [];
+					for(var i = 0; i <= numberLines; i++)
+					{
+						indices.push(i + j * (numberLines + 1));
+					}
+					drawBezier(glContext.LINE_STRIP);
 				}
-				
+				if (mode == 0)
+				for (var j = 0; j <= numberLines; j++)
+				{
+					indices = [];
+					for(var i = 0; i <= numberLines; i++)
+					{
+						indices.push(j + i * (numberLines + 1));
+					}
+					drawBezier(glContext.LINE_STRIP);
+				}
+			}
+			function drawBezier(drawMode)
+			{
 				vertexBuffer = getVertexBufferWithVertices(vertices);
 				indexBuffer = getIndexBufferWithIndices(indices);
 				colorBuffer = getVertexBufferWithVertices(colors);
@@ -231,7 +234,7 @@
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
 				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
-				glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+				glContext.drawElements(drawMode, indices.length, glContext.UNSIGNED_SHORT,0);
 			}
 			function drawScene()
 			{
@@ -255,6 +258,7 @@
 				mvtMatrix = mat4.create();
 				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mat4.multiply(mvtMatrix, translationMat, mvMatrix));
 				mat4.identity(mvMatrix);
+				
 				drawSurface();
 				drawPoints();
 			}
@@ -269,11 +273,26 @@
 			{
 				waveBool = !waveBool;
 			}
+			function squares()
+			{
+				mode = 0;
+			}
+			function triangles()
+			{
+				mode = 1;
+			}
+			function surface()
+			{
+				mode = 2;
+			}
 		</script>
 	</head>
 	<body onload="initWebGL()">
 		<br/>
 		<button onclick="waveFun()">wave</button>
+		<button onclick="triangles()">triangles</button>
+		<button onclick="surface()">surface</button>
+		<button onclick="squares()">squares</button>
 		<br/>
 		<canvas id="webgl-canvas" width="500" height="500">
 			HTML5 is not supported
