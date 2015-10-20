@@ -23,9 +23,7 @@
 					gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
 				}else{
 					float t = aVertexPosition.x;
-					vec2 B_t =
-						(1.0 - t) * ((1.0 - t) * uP0 +  t * uP1)
-						+ t * ((1.0 - t) * uP1 + t * uP2);
+					vec2 B_t = (1.0 - t) * ((1.0 - t) * uP0 +  t * uP1) + t * ((1.0 - t) * uP1 + t * uP2);
 					vec3 newVertexPos = vec3(B_t, 0.0);
 					gl_Position = uPMatrix * uMVMatrix * vec4(newVertexPos, 1.0);
 				}
