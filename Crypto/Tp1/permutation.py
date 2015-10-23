@@ -15,22 +15,17 @@ IP = [
 
 
 def inverseVector(vector):
-    i = 0
     vector_I = []
-    while i < len(vector):
+    for i in range(0, len(vector)):
         vector_I.append(vector.index(i))
-        i += 1
     return vector_I
 
 
 def permutation(message, vector):
     assert(len(message) == len(vector))
-    i = 0
-    Mp = []
     strMp = ''
-    while i < len(message):
+    for i in range(0, len(message)):
         strMp += message[vector[i]]
-        i += 1
     return strMp
 
 
