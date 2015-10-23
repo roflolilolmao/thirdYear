@@ -1,7 +1,7 @@
 import ply.yacc as yacc
-from tp1.lex3 import *
+from lex3 import *
 import pydot
-from tp1.AST import *
+from AST import *
 
 
 __author__ = 'Quentin'
