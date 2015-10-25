@@ -15,7 +15,16 @@
 			uniform vec2 uP0;
 			uniform vec2 uP1;
 			uniform vec2 uP2;
-			void main(void) {
+			uniform vec2 uP3;
+			uniform float uAlpha;
+			float tj(float ti, float xi, float yi, float xj, float yj)
+			{
+				float dx = xj - xi;
+				float dy = yj - yi;
+				return pow(sqrt(dx * dx + dy * dy), uAlpha) + ti;
+			}
+			void main(void)
+			{
 				vColor = aColor;
 				if (aVertexPosition.z != 0.0){
 					gl_PointSize = 5.0;
@@ -23,9 +32,20 @@
 					gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
 				}else{
 					float t = aVertexPosition.x;
-					float t1 = 1.0 - t;
-					vec2 B_t = t1 * t1 * uP0 + t * t1 * uP1 * 2.0 + t * t * uP2;
-					gl_Position = uPMatrix * uMVMatrix * vec4(B_t, 0.0, 1.0);
+					float t0 = 0.0;
+					float t1 = tj(t0, uP0.x, uP0.y, uP1.x, uP1.y);
+					float t2 = tj(t1, uP1.x, uP1.y, uP2.x, uP2.y);
+					float t3 = tj(t2, uP2.x, uP2.y, uP3.x, uP3.y);
+					t = (t2 - t1) * t + t1;
+					vec2 A1 = (t1 - t) / (t1 - t0) * uP0 + (t - t0) / (t1 - t0) * uP1;
+					vec2 A2 = (t2 - t) / (t2 - t1) * uP1 + (t - t1) / (t2 - t1) * uP2;
+					vec2 A3 = (t3 - t) / (t3 - t2) * uP2 + (t - t2) / (t3 - t2) * uP3;
+					
+					vec2 B1 = (t2 - t) / (t2 - t0) * A1 + (t - t0) / (t2 - t0) * A2;
+					vec2 B2 = (t3 - t) / (t3 - t1) * A2 + (t - t1) / (t3 - t1) * A3;
+					
+					vec2 C = (t2 - t) / (t2 - t1) * B1 + (t - t1) / (t2 - t1) * B2;
+					gl_Position = uPMatrix * uMVMatrix * vec4(C, 0.0, 1.0);
 				}
 			}
 		</script>
@@ -39,10 +59,8 @@
 			}
 		</script>
 		<script>
-			var loop = 0;
-			var maxPoints = 3;
-			window.onkeydown = checkKey;
-			var focusOnControlPoints = false;
+			var alpha = 0.5;
+			var maxPoints = 20;
 			var vertexBuffer = null;
 			var indexBuffer = null;
 			var colorBuffer = null;
@@ -56,60 +74,18 @@
 			var pointsIndices = [];
 			var mvMatrix = mat4.create();
 			var pMatrix = mat4.create();
-			function checkKey(ev){
-				switch(ev.keyCode){
-					case 173:
-					case 109:{
-						if (maxPoints >1) --maxPoints;
-						initBuffers();
-						break;
-					}
-					case 49:
-					case 107:{
-						if (maxPoints <20) ++maxPoints;
-						initBuffers();
-						break;
-					}
-					case 65:{
-						PointCoordinates[3] -= 0.01;
-						initBuffers();
-						break;
-					}
-					case 68:{
-						PointCoordinates[3] += 0.01;
-						initBuffers();
-						break;
-					}
-					case 87:{
-						PointCoordinates[4] += 0.01;
-						initBuffers();
-						break;
-					}
-					case 83:{
-						PointCoordinates[4] -= 0.01;
-						initBuffers();
-						break;
-					}
-					case 84:{
-						focusOnControlPoints = !focusOnControlPoints;
-						initBuffers();
-						break;
-					}
-					default:
-					  console.log(ev.keyCode);
-					break;
-				}
-			}
 			function initShaderParameters(prg){
 				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
 				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
-				prg.colorAttribute 			= glContext.getAttribLocation(prg, "aColor");
+				prg.colorAttribute = glContext.getAttribLocation(prg, "aColor");
 				glContext.enableVertexAttribArray(prg.colorAttribute);
-				prg.pMatrixUniform          = glContext.getUniformLocation(prg, 'uPMatrix');
-				prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
-				prg.p0Uniform         = glContext.getUniformLocation(prg, 'uP0');
-				prg.p1Uniform         = glContext.getUniformLocation(prg, 'uP1');
-				prg.p2Uniform         = glContext.getUniformLocation(prg, 'uP2');
+				prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
+				prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
+				prg.p0Uniform = glContext.getUniformLocation(prg, 'uP0');
+				prg.p1Uniform = glContext.getUniformLocation(prg, 'uP1');
+				prg.p2Uniform = glContext.getUniformLocation(prg, 'uP2');
+				prg.p3Uniform = glContext.getUniformLocation(prg, 'uP3');
+				prg.alpha = glContext.getUniformLocation(prg, 'uAlpha');
 			}
 			function initBuffers(){
 				indices = [];
@@ -118,7 +94,7 @@
 				for (i = 0.0; i <= maxPoints; i++){
 					vertices.push(1.0/maxPoints * i, 0, 0);
 					indices.push(i);
-					colors.push(0.0, i/maxPoints, 0.0, 1.0);
+					colors.push(0.0, 0.5, 0.0, 1.0);
 				}
 				vertexBuffer = getVertexBufferWithVertices(vertices);
 				indexBuffer = getIndexBufferWithIndices(indices);
@@ -138,32 +114,26 @@
 				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, pointsIndexBuffer);
 				glContext.drawElements(glContext.POINTS, pointsIndices.length, glContext.UNSIGNED_SHORT, 0);
-				if( focusOnControlPoints )
-					glContext.drawElements(glContext.LINE_STRIP, pointsIndices.length, glContext.UNSIGNED_SHORT, 0);
 			}
-			function drawBezierCurve(){
+			function drawCurve(x0, y0, x1, y1, x2, y2, x3, y3){
+				var p0 = [x0, y0];
+				var p1 = [x1, y1];
+				var p2 = [x2, y2];
+				var p3 = [x3, y3];
+				glContext.uniform2fv(prg.p0Uniform, p0);
+				glContext.uniform2fv(prg.p1Uniform, p1);
+				glContext.uniform2fv(prg.p2Uniform, p2);
+				glContext.uniform2fv(prg.p3Uniform, p3);
+			
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
 				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
 				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
-				if(focusOnControlPoints)
-					glContext.drawElements(glContext.POINTS, indices.length, glContext.UNSIGNED_SHORT,0);
-				else
-					glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
-			}
-			function pushPoints(sp1, sp2, sp3) {
-				var p0 = [];
-				var p1 = [];
-				var p2 = [];
-				p0.push(PointCoordinates[sp1], PointCoordinates[sp1 + 1]);
-				p1.push(PointCoordinates[sp2], PointCoordinates[sp2 + 1]);
-				p2.push(PointCoordinates[sp3], PointCoordinates[sp3 + 1]);
-				glContext.uniform2fv(prg.p0Uniform, p0);
-				glContext.uniform2fv(prg.p1Uniform, p1);
-				glContext.uniform2fv(prg.p2Uniform, p2);
+				glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
 			}
 			function drawScene(){
+				glContext.uniform1f(prg.alpha, alpha);
 				glContext.clearColor(0.9, 0.9, 1.0, 1.0);
 				glContext.enable(glContext.DEPTH_TEST);
 				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
@@ -172,52 +142,23 @@
 				mat4.identity(mvMatrix);
 				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
 				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
-				if (PointCoordinates.length == 12){
-					switch(loop){
-						case 0:
-							pushPoints(0, 3, 6);
-							break;
-						case 1:
-							pushPoints(0, 3, 9);
-							break;
-						case 2:
-							pushPoints(0, 6, 3);
-							break;
-						case 3:
-							pushPoints(0, 6, 9);
-							break;
-						case 4:
-							pushPoints(0, 9, 3);
-							break;
-						case 5:
-							pushPoints(0, 9, 6);
-							break;
-						case 6:
-							pushPoints(3, 0, 6);
-							break;
-						case 7:
-							pushPoints(3, 0, 9);
-							break;
-						case 8:
-							pushPoints(3, 6, 6);
-							break;
-						case 9:
-							pushPoints(3, 6, 9);
-							break;
-						case 10:
-							pushPoints(3, 9, 0);
-							break;
-						case 11:
-							pushPoints(3, 9, 6);
-							break;
-						default:
-							//what
+				if(PointCoordinates.length >= 9)
+				{
+					drawCurve(-PointCoordinates[3] + 2.0 * PointCoordinates[0], -PointCoordinates[4] + 2.0 * PointCoordinates[1], PointCoordinates[0], PointCoordinates[1], PointCoordinates[3], PointCoordinates[4], PointCoordinates[6], PointCoordinates[7]);
+				}
+				if (PointCoordinates.length >= 12)
+				{
+					for(var i = 0; i < PointCoordinates.length; i += 3)
+					{
+						drawCurve(PointCoordinates[i], PointCoordinates[i + 1], PointCoordinates[i + 3], PointCoordinates[i + 4], PointCoordinates[i + 6], PointCoordinates[i + 7], PointCoordinates[i + 9], PointCoordinates[i + 10]);
 					}
 				}
+				if(PointCoordinates.length >= 9)
+				{
+					drawCurve(PointCoordinates[PointCoordinates.length - 9], PointCoordinates[PointCoordinates.length - 8], PointCoordinates[PointCoordinates.length - 6], PointCoordinates[PointCoordinates.length - 5], PointCoordinates[PointCoordinates.length - 3], PointCoordinates[PointCoordinates.length - 2], -PointCoordinates[PointCoordinates.length - 6] + 2.0 * PointCoordinates[PointCoordinates.length - 3], -PointCoordinates[PointCoordinates.length - 5] + 2.0 * PointCoordinates[PointCoordinates.length - 2]);
+				}
 				if( PointCoordinates.length > 2 )
-				  drawControlPoints();
-				if( PointCoordinates.length == 12 )
-				  drawBezierCurve();
+					drawControlPoints();
 			}
 			function initWebGL(){
 				glContext = getGLContext('webgl-canvas');
@@ -228,25 +169,21 @@
 		</script>
 	</head>
 	<body onload="initWebGL()">
-		<script>displayTitle("Ch.06 E.g.1 : Courbes quadratiques de Bezier", 1,1,1,1,1,1,1);</script>
-		<p>	Définir les trois points de contrôle en cliquant à trois endroits dans le canevas, puis pour modifier la courbe utiliser les touches suivantes :
-		<br>'-' ou '+' pour réduire ou augmenter la résolution de la courbe
-		<br>'a', 'w', 's' et 'd' pour bouger le point de contrôle central
-		<br>'t' pour changer l'apparence de la courbe de Bézier
-		</p>
+		<p id="alphap">alpha = 0.5</p>
+		<input type="range" id="alpharange" value="10" min="0" max="20" onchange="alphachange()"/>
+		<br/>
 		<canvas id="webgl-canvas" width="500" height="500">
 			HTML5 is not supported
 		</canvas>
 	</body>
 	<script id='code-js' type="text/javascript">
-		function addPointOnGLScene(pX,pY){
-			if (PointCoordinates.length >= 12){
-				PointCoordinates = [];
-				pointsIndices = [];
+		function addPointOnGLScene(pX, pY){
+			if(pX != PointCoordinates[PointCoordinates.length - 3] || pY != PointCoordinates[PointCoordinates.length -2])
+			{
+				PointCoordinates.push(pX, pY, 0.5);
+				pointsIndices.push(pointsIndices.length);
+				initBuffers();
 			}
-			PointCoordinates.push(pX,pY, 0.5);
-			pointsIndices.push(pointsIndices.length);
-			initBuffers();
 		}
 		function getMousePos(canvas, evt) {
 			var rect = canvas.getBoundingClientRect();
@@ -258,13 +195,12 @@
 		var canvas = document.getElementById('webgl-canvas');
 		canvas.addEventListener('mousedown', function(evt) {
 			if (evt.button === 2){
-				loop = (loop + 1) % 12;
+				PointCoordinates = [];
+				pointsIndices = [];
 			} else {
 				var mousePos = getMousePos(canvas, evt);
 				var pX = (mousePos.x - canvas.width/2.0) / canvas.width * 2.0;
 				var pY = (canvas.height/2.0 - mousePos.y) / canvas.height * 2.0;
-				var message = 'point: ' + pX + ',' + pY;
-				console.log(message);
 				addPointOnGLScene(pX,pY);
 			}
 		}, false);
@@ -274,5 +210,11 @@
 				return false;
 			}
 		}, false);
+		function alphachange()
+		{
+			alpha = document.getElementById('alpharange').value / 20.0;
+			var str = "alpha = " + alpha;
+			document.getElementById('alphap').innerHTML = str
+		}
 	</script>
 </html>

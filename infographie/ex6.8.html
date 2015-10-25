@@ -240,8 +240,8 @@
 				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
 				mvtMatrix = mat4.create();
 				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mat4.multiply(mvtMatrix, translationMat, mvMatrix));
-				mat4.identity(mvMatrix);
-				
+				rotX = 0;
+				rotY = 0;
 				drawSurface();
 			}
 			function initWebGL()
