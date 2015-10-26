@@ -13,6 +13,7 @@
 		    uniform mat4 uMVMatrix;
 		    uniform mat4 uPMatrix;
 			varying vec4 vColor;
+			varying vec4 vPosition;
 		    void main(void) {
 		        vColor = aColor;
 				gl_PointSize = 4.0;
@@ -24,26 +25,53 @@
 				precision highp float;
 			#endif
 			varying vec4 vColor;
+			varying vec4 vPosition;
+			uniform int mode;
+			const float radius;
+			uniform vec3 center;
+			const float amb = 0.33;
+			const float spec = 0.33;
+			const float diff = 0.33;
+			const float alpha = 4.0;
+			const vec3 lightPos = vec3(0.0, 0.0, 0.0);
 			void main(void) {
-		   		gl_FragColor = vColor;
+				if(mode == 1)
+				{
+					float dist = distance(center.xy, vPosition.xy);
+					float z = sqrt(radius * radius - dist * dist);
+					vec3 N = normalize(vec3(vPosition.x - center.x, vPosition.y - center.y, z));
+					vec3 L = normalize(lightPos - (center + N * radius));
+					//vec3 V = normalize(vec3(0.0, 0.0, 1.0) - (center + N * radius));
+					vec3 V = normalize(vec3(0.0, 0.0, 1.0));
+					vec3 R = normalize(reflect(-L, N));
+					vec3 ambientColor = vColor.xyz * amb;
+					vec3 diffuseColor = diff * vColor.xyz * (dot(L, N));
+					vec3 specularColor = vec3(spec, spec, spec) * pow(max(dot(R, V), 0.0), alpha);
+					gl_FragColor = vec4(ambientColor + diffuseColor + specularColor, step(dist, radius));
+				}
+				else
+				{
+					gl_FragColor = vColor;
+				}
 			}
 		</script>
 		<script>
-			var slowMoFactor = 100000;
-			var G = 6.67e-11 * slowMoFactor;
-			var  visualFactor = 2e12;
+			var slowMoFactor = 1e6;
+			var G = 6.67e-11 * slowMoFactor * 10;
+			var  visualFactor = 2e13;
 			var translateZ = -2.0;
-			function Planet(mass, speed, color, pos)
+			function Planet(mass, speed, color, pos, orbitFactor)
 			{
 				this.mass = mass;
 				this.speed = speed;
 				this.color = color;
 				this.pos = pos;
+				this.orbitFactor = orbitFactor;
 				this.acc = vec3.create();
 				this.update = function(planets)
 				{
 					var acc = vec3.create();
-					for(var i = 0; i < planets.length; i++)
+					for(i in planets)
 					{
 						if(this.mass != planets[i].mass)
 						{
@@ -55,7 +83,7 @@
 							vec3.add(acc, acc, change);
 						}
 					}
-					vec3.scale(acc, acc, 1 / this.mass * 1e1);
+					vec3.scale(acc, acc, 1 / this.mass);
 					vec3.add(this.speed, this.speed, acc);
 					var temp = vec3.create();
 					vec3.scale(temp, this.speed, slowMoFactor);
@@ -85,37 +113,124 @@
 				}
 				this.initBuff = function()
 				{
+					vertices = [];
+					indices = [];
+					colors = [];
+					
+					
+					glContext.uniform3f(prg.center, center[0], center[1], center[2]);
+					
+					vertices.push(
+						this.pos[0] / visualFactor,
+						this.pos[1] / visualFactor,
+						this.pos[2] / visualFactor
+					);
+					indices.push(0, 1, 2, 3);
+					colors.push(this.color[0], this.color[1], this.color[2], 1.0);
+					
+					vertexBuffer = getVertexBufferWithVertices(vertices);
+					indexBuffer = getIndexBufferWithIndices(indices);
+					colorBuffer = getVertexBufferWithVertices(colors);
+					
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+					glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
+					glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+					glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+					glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+					
+				}
+				this.initOrbitBuff = function()
+				{
+					
+					vertices = [];
+					indices = [];
+					colors = [];
+					
 					vertices.push(this.pos[0] / visualFactor, this.pos[1] / visualFactor, this.pos[2] / visualFactor);
 					indices.push(indices.length);
 					colors.push(this.color[0], this.color[1], this.color[2], 1.0);
+					
+					var s = vec3.create();
+					var p = vec3.create();
+					vec3.copy(s, this.speed);
+					vec3.copy(p, this.pos);
+					for(var j = 0; j < 50; j++)
+					{
+						var acc = vec3.create();
+						for(i in planets)
+						{
+							if(this.mass != planets[i].mass)
+							{
+								var dir = vec3.create();
+								vec3.subtract(dir, p, planets[i].pos);
+								vec3.normalize(dir, dir);
+								var change = vec3.create();
+								vec3.scale(change, dir, -G * orbitFactor * this.mass * planets[i].mass / vec3.squaredDistance(p, planets[i].pos));
+								vec3.add(acc, acc, change);
+							}
+						}
+						vec3.scale(acc, acc, 1 / this.mass);
+						vec3.add(s, s, acc);
+						var temp = vec3.create();
+						vec3.scale(temp, s, slowMoFactor * orbitFactor);
+						vec3.add(p, p, temp);
+						vertices.push(p[0] / visualFactor, p[1] / visualFactor, p[2] / visualFactor);
+						indices.push(indices.length);
+						colors.push(this.color[0], this.color[1], this.color[2], 1.0);
+					}
+				
+					vertexBuffer = getVertexBufferWithVertices(vertices);
+					indexBuffer = getIndexBufferWithIndices(indices);
+					colorBuffer = getVertexBufferWithVertices(colors);
+					
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+					glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
+					glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+					glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+					glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
 				}
 			}
 			
-			var sol = new Planet(1.98855e30, [0.0, 0.0, 0.0], [1, 1, 1], [0.0, 0.0, 0.0]);
-			var mercury = new Planet(3.3e23, [4.7e4, 0.0, 0.0], [0.4, 0.4, 0.4], [0.0, 5.8e11, 0.0]);
-			var venus = new Planet(4.8675e24, [3.5e4, 0.0, 0.0], [0.9, 0.9, 0.9], [0.0, 1.08e12, 0.0]);
-			var earth = new Planet(5.97237e24, [2.978e4, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.517e12, 0.0]);
-			var mars = new Planet(6.4171e23, [2.4e4, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 2.27e12, 0.0]);
-			var planets = [sol, mercury, venus, earth, mars];
+			var sol = new Planet(1.98855e30, [0.0, 0.0, 0.0], [1, 1, 1], [0.0, 0.0, 0.0], 0);
+			var mercury = new Planet(3.3e23, [4.7e4, 0.0, 0.0], [0.4, 0.4, 0.4], [0.0, 5.8e11, 0.0], 1.5);
+			var venus = new Planet(4.8675e24, [3.5e4, 0.0, 0.0], [0.9, 0.9, 0.7], [0.0, 1.08e12, 0.0], 4);
+			var earth = new Planet(5.97237e24, [2.978e4, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.517e12, 0.0], 7);
+			// var moon = new Planet(7.3477e22, [2.978e4 + 1.022e3, 0.0, 0.0], [0.4, 0.4, 0.4], [0.0, 1.517e12 + 3.84e9, 0.0]);
+			var mars = new Planet(6.4171e23, [2.4e4, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 2.27e12, 0.0], 12);
+			var jupiter = new Planet(1.8986e27, [1.3e4, 0.0, 0.0], [1.0, 0.5, 0.0], [0.0, 7.78e12, 0.0], 80);
+			var saturn = new Planet(5.6836e26, [9.69e3, 0.0, 0.0], [1.0, 1.0, 0.7], [0.0, 1.353e13, 0.0], 200);
+			var uranus = new Planet(8.6810e25, [6.8e3, 0.0, 0.0], [0.0, 1.0, 1.0], [0.0, 2.87e13, 0.0], 550);
+			var neptune = new Planet(1.0243e26, [5.43e3, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 4.498e13, 0.0], 1100);
+			var planets = [sol, mercury, venus, earth, mars, jupiter, saturn, uranus, neptune];
 			function updateSystem ()
 			{
-				for(var i = 0; i < planets.length; i++)
+				for(i in planets)
 				{
 					planets[i].update(planets);
 				}
 			}
 			function updateBuffSystem ()
 			{
-				for(var i = 0; i < planets.length; i++)
+				for(i in planets)
 				{
 					planets[i].initBuff();
 				}
 			}
 			function updateBuffVecSystem ()
 			{
-				for(var i = 0; i < planets.length; i++)
+				for(i in planets)
 				{
 					planets[i].initVecBuff();
+				}
+			}
+			function updateBuffOrbitSystem ()
+			{
+				
+				for(i in planets)
+				{
+					planets[i].initOrbitBuff();
 				}
 			}
 		
@@ -129,12 +244,19 @@
 			var pMatrix = mat4.create();
 			mat4.identity(mvMatrix);
 			mat4.identity(pMatrix);
-			window.onkeydown = function checkKey(ev){
-				switch(ev.keyCode){
+			window.onkeydown = function(e) {
+				switch(e.keyCode){
+					case 87:
+						//w
+						translateZ += 0.1;
+						break;
+					case 83:
+						//s
+						translateZ -= 0.1;
+						break;
 					default:
-					break;
 				}
-			}
+			};
 			function initShaderParameters(prg){
 				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
 			    glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
@@ -142,6 +264,8 @@
 			    glContext.enableVertexAttribArray(prg.colorAttribute);
 			    prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
 			    prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
+				prg.mode = glContext.getUniformLocation(prg, 'mode');
+				prg.center = glContext.getUniformLocation(prg, 'center');
 			}
 			function initBuffers(){
 			}
@@ -166,30 +290,17 @@
 			}
 			function drawPlanets()
 			{
-				vertices = [];
-				indices = [];
-				colors = [];
-				
+				glContext.uniform1i(prg.mode, 1);
 				updateBuffSystem();
-				
-				vertexBuffer = getVertexBufferWithVertices(vertices);
-				indexBuffer = getIndexBufferWithIndices(indices);
-				colorBuffer = getVertexBufferWithVertices(colors);
-				
-				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
-				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
-				glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
-				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
-				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
-				glContext.drawElements(glContext.POINTS, indices.length, glContext.UNSIGNED_SHORT,0);
 			}
 			function drawSystem()
 			{
+				//drawVecs();
 				drawPlanets();
-				drawVecs();
+				updateBuffOrbitSystem();
 			}
 			function drawScene(){
-				glContext.clearColor(0.1, 0.1, 0.1, 1.0);
+				glContext.clearColor(0.0, 0.0, 0.0, 1.0);
 				glContext.enable(glContext.DEPTH_TEST);
 				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
 				glContext.viewport(0, 0, c_width, c_height);
@@ -198,6 +309,7 @@
 				translationMat = mat4.create();
 				mat4.identity(translationMat);
 				mat4.translate(translationMat, translationMat, [0.0, 0.0, translateZ]);
+				
 				rotateModelViewMatrixUsingQuaternion();
 				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
 				mvtMatrix = mat4.create();
@@ -206,7 +318,6 @@
 				rotY = 0;
 				
 				updateSystem();
-								
 				drawSystem();
 			}
 			function initWebGL(){
@@ -218,7 +329,7 @@
 		</script>
 	</head>
 	<body onload="initWebGL()">
-		<canvas id="webgl-canvas" width="500" height="500">
+		<canvas id="webgl-canvas" width="750" height="750">
 			HTML5 is not supported
 		</canvas>
 	</body>

@@ -8,10 +8,14 @@ crypto 9 décembre
 c# 10 novembre
 
 <!-- devoirs -->
-l2p labo conception OS
-
+crypto 11.9
 <!-- projects -->
 <p3>
+wiki
 <webgl>
 <android>
-CDC
+wtf
+<webdev>
+holyshit
+<ai>
+maybe work a bit you fuck
