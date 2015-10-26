@@ -12,12 +12,30 @@
 			attribute vec4 aColor;
 		    uniform mat4 uMVMatrix;
 		    uniform mat4 uPMatrix;
+			uniform vec3 center;
+			varying vec3 aCenter;
 			varying vec4 vColor;
-			varying vec4 vPosition;
+			varying vec3 vPosition;
+			varying vec3 vLightpos;
+			uniform int vmode;
+			const vec3 lightPos = vec3(0.0, 0.0, 0.0);
 		    void main(void) {
 		        vColor = aColor;
 				gl_PointSize = 4.0;
-				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+				if(vmode != 0)
+				{
+					vec4 a = uPMatrix * vec4(aVertexPosition - center, 1.0);
+					vec4 c = uPMatrix * uMVMatrix * vec4(center, 1.0);
+					gl_Position = c + a;
+					vPosition = gl_Position.xyz;
+					aCenter = c.xyz;
+					vLightpos = (uPMatrix * uMVMatrix * vec4(lightPos, 1.0)).xyz;
+				}
+				else
+				{
+					gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+					vPosition = aVertexPosition;
+				}
 			}
 		</script>
 		<script id="shader-fs" type="x-shader/x-fragment">
@@ -25,29 +43,43 @@
 				precision highp float;
 			#endif
 			varying vec4 vColor;
-			varying vec4 vPosition;
+			varying vec3 vPosition;
 			uniform int mode;
-			const float radius;
-			uniform vec3 center;
-			const float amb = 0.33;
-			const float spec = 0.33;
-			const float diff = 0.33;
-			const float alpha = 4.0;
-			const vec3 lightPos = vec3(0.0, 0.0, 0.0);
+			uniform float radius;
+			varying vec3 aCenter;
+			varying vec3 vLightpos;
+			const float amb = 0.5;
+			const float spec = 0.5;
+			const float diff = 0.5;
+			const float alpha = 8.0;
 			void main(void) {
 				if(mode == 1)
 				{
+					vec3 center = aCenter;
+					vec3 lightPos = vLightpos;
+					// vec3 lightPos = vec3(0.0, 0.0, 0.0);
+					float r = radius;
 					float dist = distance(center.xy, vPosition.xy);
-					float z = sqrt(radius * radius - dist * dist);
+					float z = sqrt(r * r - dist * dist);
 					vec3 N = normalize(vec3(vPosition.x - center.x, vPosition.y - center.y, z));
-					vec3 L = normalize(lightPos - (center + N * radius));
-					//vec3 V = normalize(vec3(0.0, 0.0, 1.0) - (center + N * radius));
+					vec3 L = normalize(lightPos - (center + N * r));
+					// vec3 V = normalize(vec3(0.0, 0.0, 1.0) - (center + N * r));
 					vec3 V = normalize(vec3(0.0, 0.0, 1.0));
+					// vec3 V = normalize((uPMatrix * uMVMatrix * vec4(vPosition, 1.0)).xyz);
 					vec3 R = normalize(reflect(-L, N));
 					vec3 ambientColor = vColor.xyz * amb;
-					vec3 diffuseColor = diff * vColor.xyz * (dot(L, N));
+					vec3 diffuseColor = diff * vColor.xyz * (dot(L, N) - 0.5);
 					vec3 specularColor = vec3(spec, spec, spec) * pow(max(dot(R, V), 0.0), alpha);
-					gl_FragColor = vec4(ambientColor + diffuseColor + specularColor, step(dist, radius));
+					gl_FragColor = vec4(ambientColor + diffuseColor + specularColor, step(dist, r));
+					// radius < distance(center.xy, vPosition.xy) ? gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0) : 
+					// gl_FragColor = vec4(vColor.xyz, step(dist, r));						
+					
+				}
+				else if(mode == 2)
+				{
+					float r = radius;
+					float dist = distance(aCenter.xy, vPosition.xy);
+					gl_FragColor = vec4(vColor.xyz, step(dist, r));
 				}
 				else
 				{
@@ -56,12 +88,9 @@
 			}
 		</script>
 		<script>
-			var slowMoFactor = 1e6;
-			var G = 6.67e-11 * slowMoFactor * 10;
-			var  visualFactor = 2e13;
-			var translateZ = -2.0;
-			function Planet(mass, speed, color, pos, orbitFactor)
+			function Planet(mass, speed, color, pos, radius, orbitFactor)
 			{
+				this.radius = radius;
 				this.mass = mass;
 				this.speed = speed;
 				this.color = color;
@@ -117,28 +146,54 @@
 					indices = [];
 					colors = [];
 					
-					
-					glContext.uniform3f(prg.center, center[0], center[1], center[2]);
-					
+					var c = [this.pos[0] / visualFactor, this.pos[1] / visualFactor, this.pos[2] / visualFactor];
+					var radius = this.radius;
 					vertices.push(
-						this.pos[0] / visualFactor,
-						this.pos[1] / visualFactor,
-						this.pos[2] / visualFactor
+						c[0] + radius,
+						c[1] + radius,
+						c[2]
 					);
-					indices.push(0, 1, 2, 3);
+					vertices.push(
+						c[0] - radius,
+						c[1] + radius,
+						c[2]
+					);
+					vertices.push(
+						c[0] + radius,
+						c[1] - radius,
+						c[2]
+					);
+					vertices.push(
+						c[0] - radius,
+						c[1] - radius,
+						c[2]
+					);
 					colors.push(this.color[0], this.color[1], this.color[2], 1.0);
+					colors.push(this.color[0], this.color[1], this.color[2], 1.0);
+					colors.push(this.color[0], this.color[1], this.color[2], 1.0);
+					colors.push(this.color[0], this.color[1], this.color[2], 1.0);
+					indices.push(0, 1, 2, 3);
+					
+					glContext.uniform1i(prg.mode, 1);
+					glContext.uniform1i(prg.vmode, 1);
+					if(planets[i].mass > 1e30)
+					{
+						glContext.uniform1i(prg.mode, 2);
+						glContext.uniform1i(prg.vmode, 2);
+					}
+						
+					glContext.uniform1f(prg.radius, radius);
+					glContext.uniform3f(prg.center, c[0], c[1], 0.0);
 					
 					vertexBuffer = getVertexBufferWithVertices(vertices);
 					indexBuffer = getIndexBufferWithIndices(indices);
 					colorBuffer = getVertexBufferWithVertices(colors);
-					
 					glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
 					glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
 					glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
 					glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
 					glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
 					glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
-					
 				}
 				this.initOrbitBuff = function()
 				{
@@ -193,16 +248,21 @@
 				}
 			}
 			
-			var sol = new Planet(1.98855e30, [0.0, 0.0, 0.0], [1, 1, 1], [0.0, 0.0, 0.0], 0);
-			var mercury = new Planet(3.3e23, [4.7e4, 0.0, 0.0], [0.4, 0.4, 0.4], [0.0, 5.8e11, 0.0], 1.5);
-			var venus = new Planet(4.8675e24, [3.5e4, 0.0, 0.0], [0.9, 0.9, 0.7], [0.0, 1.08e12, 0.0], 4);
-			var earth = new Planet(5.97237e24, [2.978e4, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.517e12, 0.0], 7);
+			var radius = 0.03;
+			var slowMoFactor = 1e6;
+			var G = 6.67e-11 * slowMoFactor * 10;
+			var  visualFactor = 2e13;
+			var sol = new Planet(1.98855e30, [0.0, 0.0, 0.0], [1, 1, 1], [0.0, 0.0, 0.0], 0.02, 0);
+			var mercury = new Planet(3.3e23, [4.7e4, 0.0, 0.0], [0.4, 0.4, 0.4], [0.0, 5.8e11, 0.0], 0.01, 1.5);
+			var venus = new Planet(4.8675e24, [3.5e4, 0.0, 0.0], [0.9, 0.9, 0.7], [0.0, 1.08e12, 0.0], 0.015, 4);
+			var earth = new Planet(5.97237e24, [2.978e4, 0.0, 0.0], [0.3, 0.5, 1.0], [0.0, 1.517e12, 0.0], 0.02, 7);
 			// var moon = new Planet(7.3477e22, [2.978e4 + 1.022e3, 0.0, 0.0], [0.4, 0.4, 0.4], [0.0, 1.517e12 + 3.84e9, 0.0]);
-			var mars = new Planet(6.4171e23, [2.4e4, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 2.27e12, 0.0], 12);
-			var jupiter = new Planet(1.8986e27, [1.3e4, 0.0, 0.0], [1.0, 0.5, 0.0], [0.0, 7.78e12, 0.0], 80);
-			var saturn = new Planet(5.6836e26, [9.69e3, 0.0, 0.0], [1.0, 1.0, 0.7], [0.0, 1.353e13, 0.0], 200);
-			var uranus = new Planet(8.6810e25, [6.8e3, 0.0, 0.0], [0.0, 1.0, 1.0], [0.0, 2.87e13, 0.0], 550);
-			var neptune = new Planet(1.0243e26, [5.43e3, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 4.498e13, 0.0], 1100);
+			var mars = new Planet(6.4171e23, [2.4e4, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 2.27e12, 0.0], 0.01, 12);
+			var jupiter = new Planet(1.8986e27, [1.3e4, 0.0, 0.0], [1.0, 0.5, 0.0], [0.0, 7.78e12, 0.0], 0.08, 80);
+			var saturn = new Planet(5.6836e26, [9.69e3, 0.0, 0.0], [1.0, 1.0, 0.7], [0.0, 1.353e13, 0.0], 0.06, 200);
+			var uranus = new Planet(8.6810e25, [6.8e3, 0.0, 0.0], [0.0, 1.0, 1.0], [0.0, 2.87e13, 0.0], 0.05, 550);
+			var neptune = new Planet(1.0243e26, [5.43e3, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 4.498e13, 0.0], 0.05, 1100);
+			
 			var planets = [sol, mercury, venus, earth, mars, jupiter, saturn, uranus, neptune];
 			function updateSystem ()
 			{
@@ -233,7 +293,9 @@
 					planets[i].initOrbitBuff();
 				}
 			}
-		
+					
+			var pause = false;
+			var translateZ = -2.0;
 			var vertexBuffer = null;
 			var indexBuffer = null;
 			var colorBuffer = null;
@@ -265,6 +327,8 @@
 			    prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
 			    prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
 				prg.mode = glContext.getUniformLocation(prg, 'mode');
+				prg.vmode = glContext.getUniformLocation(prg, 'vmode');
+				prg.radius = glContext.getUniformLocation(prg, 'radius');
 				prg.center = glContext.getUniformLocation(prg, 'center');
 			}
 			function initBuffers(){
@@ -290,21 +354,28 @@
 			}
 			function drawPlanets()
 			{
-				glContext.uniform1i(prg.mode, 1);
 				updateBuffSystem();
 			}
 			function drawSystem()
 			{
+				glContext.uniform1i(prg.mode, 0);
+				glContext.uniform1i(prg.vmode, 0);
 				//drawVecs();
-				drawPlanets();
 				updateBuffOrbitSystem();
+				
+				drawPlanets();
 			}
 			function drawScene(){
 				glContext.clearColor(0.0, 0.0, 0.0, 1.0);
-				glContext.enable(glContext.DEPTH_TEST);
-				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
-				glContext.viewport(0, 0, c_width, c_height);
+				// glContext.enable(glContext.DEPTH_TEST);
 				
+				glContext.blendFunc(glContext.SRC_ALPHA, glContext.ONE_MINUS_SRC_ALPHA);
+				glContext.enable(glContext.BLEND);
+				glContext.disable(glContext.DEPTH_TEST);
+				
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				
+				glContext.viewport(0, 0, c_width, c_height);
 				mat4.perspective(pMatrix, degToRad(60.0), c_width / c_height, 0.1, 10000.0);
 				translationMat = mat4.create();
 				mat4.identity(translationMat);
@@ -317,7 +388,8 @@
 				rotX = 0;
 				rotY = 0;
 				
-				updateSystem();
+				if (!pause) updateSystem();
+				
 				drawSystem();
 			}
 			function initWebGL(){
@@ -326,9 +398,15 @@
 				initBuffers();
 				renderLoop();
 			}
+			function pauseF()
+			{
+				pause = !pause;
+			}
 		</script>
 	</head>
 	<body onload="initWebGL()">
+		<button onclick="pauseF()">Play, Pause</button>
+		<br/>
 		<canvas id="webgl-canvas" width="750" height="750">
 			HTML5 is not supported
 		</canvas>
