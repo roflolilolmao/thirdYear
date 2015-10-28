@@ -8,7 +8,8 @@ crypto 9 décembre
 c# 10 novembre
 
 <!-- devoirs -->
-crypto 11.9
+crypto 11.11
+c# dosomething 3.11
 <!-- projects -->
 <p3>
 wiki
