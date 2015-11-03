@@ -1,5 +1,6 @@
 import cv2
-import numpy
+
+import numpy as np
 
 
 __author__ = 'Quentin'
@@ -12,7 +13,6 @@ def ex1():
     result = cv2.bitwise_and(gry, 0x1)
     result = cv2.normalize(result, result, 0, 255, cv2.NORM_MINMAX)
     cv2.imshow('lol', result)
-    cv2.waitKey(0)
 
 
 def ex2():
@@ -26,7 +26,6 @@ def ex2():
         mask2 = mask
         mask2 <<= 1
         mask += mask2
-    cv2.waitKey(0)
 
 
 def ex3():
@@ -36,8 +35,26 @@ def ex3():
         image = cv2.imread(name)
         res = cv2.subtract(image, ref)
         cv2.imshow(str(i), res)
-    cv2.waitKey(0)
+
+
+def ex3_serie4e():
+    image = cv2.imread('./images/serie4/UneBalleBleue.jpg')
+    blue = image[:,:,1]
+    wat, thresh = cv2.threshold(blue, 0, 255, cv2.THRESH_BINARY_INV)
+
+    kernel = np.ones((7, 7), np.uint8)
+    dilate = cv2.dilate(thresh, kernel, iterations=1)
+    erosion = cv2.erode(dilate, kernel, iterations=1)
+    mask = erosion
+    res = cv2.bitwise_and(image, image, mask)
+    cv2.imshow('base', image)
+    cv2.imshow('blue', blue)
+    cv2.imshow('thresh', thresh)
+    cv2.imshow('dilate', dilate)
+    cv2.imshow('erosion', erosion)
+    cv2.imshow('mask', mask)
 
 
 if __name__ == '__main__':
-    ex3()
+    ex3_serie4e()
+    cv2.waitKey(0)

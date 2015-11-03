@@ -5,9 +5,9 @@ _tabversion = '3.5'
 
 _lr_method = 'LALR'
 
-_lr_signature = '7D86989AD3E239BC83C02C585DD588C6'
+_lr_signature = '890E2CC1D1CBBF520F9F4DD34E82705C'
     
-_lr_action_items = {'$end':([2,3,4,6,7,8,10,14,16,17,18,19,20,],[-8,0,-3,-4,-1,-7,-8,-9,-6,-5,-10,-11,-2,]),'PAR_CLOSE':([8,9,10,14,16,18,19,],[-7,16,-8,-9,-6,-10,-11,]),'ADD_OP':([0,1,2,4,8,9,10,11,12,13,14,15,16,17,18,19,],[5,5,-8,12,-7,12,-8,5,5,5,-9,5,-6,12,-10,-11,]),'PAR_OPEN':([0,1,11,12,13,15,],[1,1,1,1,1,1,]),'MUL_OP':([2,4,8,9,10,14,16,17,18,19,],[-8,13,-7,13,-8,-9,-6,13,13,-11,]),'IDENTIFIER':([0,1,11,12,13,15,],[2,10,10,10,10,2,]),'EQUAL':([2,],[11,]),'NUMBER':([0,1,5,11,12,13,15,],[8,8,14,8,8,8,8,]),'SEMICOLON':([2,4,6,7,8,10,14,16,17,18,19,],[-8,-3,-4,15,-7,-8,-9,-6,-5,-10,-11,]),}
+_lr_action_items = {'PRINT':([0,13,22,],[1,1,1,]),'ADD_OP':([1,7,8,10,11,12,14,15,16,17,18,19,21,23,24,25,],[9,9,-10,17,-9,9,9,17,-11,9,9,17,17,-12,-13,-8,]),'MUL_OP':([8,10,11,15,16,19,21,23,24,25,],[-10,18,-9,18,-11,18,18,18,-13,-8,]),'BRA_CLOSE':([2,3,6,8,10,11,16,20,21,23,24,25,26,27,],[-1,-4,-3,-10,-5,-9,-11,-2,-7,-12,-13,-8,27,-6,]),'EQUAL':([4,],[14,]),'NUMBER':([1,7,9,12,14,17,18,],[11,11,16,11,11,11,11,]),'PAR_CLOSE':([8,11,16,19,23,24,25,],[-10,-9,-11,25,-12,-13,-8,]),'PAR_OPEN':([1,7,12,14,17,18,],[12,12,12,12,12,12,]),'IDENTIFIER':([0,1,7,12,13,14,17,18,22,],[4,8,8,8,4,8,8,8,4,]),'$end':([2,3,5,6,8,10,11,16,20,21,23,24,25,27,],[-1,-4,0,-3,-10,-5,-9,-11,-2,-7,-12,-13,-8,-6,]),'SEMICOLON':([2,3,6,8,10,11,16,21,23,24,25,27,],[13,-4,-3,-10,-5,-9,-11,-7,-12,-13,-8,-6,]),'BRA_OPEN':([8,11,15,16,23,24,25,],[-10,-9,22,-11,-12,-13,-8,]),'WHILE':([0,13,22,],[7,7,7,]),}
 
 _lr_action = {}
 for _k, _v in _lr_action_items.items():
@@ -16,7 +16,7 @@ for _k, _v in _lr_action_items.items():
       _lr_action[_x][_k] = _y
 del _lr_action_items
 
-_lr_goto_items = {'assignement':([0,15,],[6,6,]),'statement':([0,15,],[7,7,]),'expression':([0,1,11,12,13,15,],[4,9,17,18,19,4,]),'program':([0,15,],[3,20,]),}
+_lr_goto_items = {'program':([0,13,22,],[5,20,26,]),'expression':([1,7,12,14,17,18,],[10,15,19,21,23,24,]),'assignement':([0,13,22,],[6,6,6,]),'statement':([0,13,22,],[2,2,2,]),'structure':([0,13,22,],[3,3,3,]),}
 
 _lr_goto = {}
 for _k, _v in _lr_goto_items.items():
@@ -26,15 +26,17 @@ for _k, _v in _lr_goto_items.items():
 del _lr_goto_items
 _lr_productions = [
   ("S' -> program","S'",1,None,None,None),
-  ('program -> statement','program',1,'p_program_statement','parser3.py',14),
-  ('program -> statement SEMICOLON program','program',3,'p_program_statement','parser3.py',15),
-  ('statement -> expression','statement',1,'p_statement_exp','parser3.py',23),
-  ('statement -> assignement','statement',1,'p_statement_exp','parser3.py',24),
-  ('assignement -> IDENTIFIER EQUAL expression','assignement',3,'p_assignement','parser3.py',29),
-  ('expression -> PAR_OPEN expression PAR_CLOSE','expression',3,'p_expression_par','parser3.py',34),
-  ('expression -> NUMBER','expression',1,'p_expression_num','parser3.py',39),
-  ('expression -> IDENTIFIER','expression',1,'p_expression_num','parser3.py',40),
-  ('expression -> ADD_OP NUMBER','expression',2,'p_expression_unary_num','parser3.py',45),
-  ('expression -> expression ADD_OP expression','expression',3,'p_expression_op','parser3.py',62),
-  ('expression -> expression MUL_OP expression','expression',3,'p_expression_op','parser3.py',63),
+  ('program -> statement','program',1,'p_program_statement','parser5.py',14),
+  ('program -> statement SEMICOLON program','program',3,'p_program_statement','parser5.py',15),
+  ('statement -> assignement','statement',1,'p_statement_exp','parser5.py',23),
+  ('statement -> structure','statement',1,'p_statement_exp','parser5.py',24),
+  ('statement -> PRINT expression','statement',2,'p_print_statement','parser5.py',29),
+  ('structure -> WHILE expression BRA_OPEN program BRA_CLOSE','structure',5,'p_while_structure','parser5.py',34),
+  ('assignement -> IDENTIFIER EQUAL expression','assignement',3,'p_assignement','parser5.py',39),
+  ('expression -> PAR_OPEN expression PAR_CLOSE','expression',3,'p_expression_par','parser5.py',44),
+  ('expression -> NUMBER','expression',1,'p_expression_num','parser5.py',49),
+  ('expression -> IDENTIFIER','expression',1,'p_expression_num','parser5.py',50),
+  ('expression -> ADD_OP NUMBER','expression',2,'p_expression_unary_num','parser5.py',55),
+  ('expression -> expression ADD_OP expression','expression',3,'p_expression_op','parser5.py',72),
+  ('expression -> expression MUL_OP expression','expression',3,'p_expression_op','parser5.py',73),
 ]
