@@ -117,10 +117,7 @@
     </navigator>
     <panes>
       <pane id="Scratches" />
-<<<<<<< HEAD
       <pane id="Scope" />
-=======
->>>>>>> fdfbd85a5334e517da772f19ceae6ef5fb6d1d8e
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -155,10 +152,7 @@
           </PATH>
         </subPane>
       </pane>
-<<<<<<< HEAD
-=======
       <pane id="Scope" />
->>>>>>> fdfbd85a5334e517da772f19ceae6ef5fb6d1d8e
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -408,14 +402,7 @@
       <window_info id="Application Servers" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.34876543" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
->>>>>>> fdfbd85a5334e517da772f19ceae6ef5fb6d1d8e
-=======
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.34876543" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
->>>>>>> 81f34e5123a026ce7061d5192433b239139a0e6b
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3299595" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
@@ -447,7 +434,6 @@
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
-<<<<<<< HEAD
     <entry file="file://$PROJECT_DIR$/tp1/lex3.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
@@ -456,8 +442,6 @@
         </state>
       </provider>
     </entry>
-=======
->>>>>>> fdfbd85a5334e517da772f19ceae6ef5fb6d1d8e
     <entry file="file://$PROJECT_DIR$/tp1/parser2.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
@@ -480,7 +464,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-<<<<<<< HEAD
         </state>
       </provider>
     </entry>
@@ -488,23 +471,13 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-=======
-          <folding>
-            <element signature="e#0#23#0" expanded="true" />
-          </folding>
->>>>>>> fdfbd85a5334e517da772f19ceae6ef5fb6d1d8e
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/tp1/lex3.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-<<<<<<< HEAD
           <caret line="20" column="16" selection-start-line="20" selection-start-column="16" selection-end-line="20" selection-end-column="16" />
-=======
-          <caret line="11" column="0" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
-          <folding />
->>>>>>> fdfbd85a5334e517da772f19ceae6ef5fb6d1d8e
         </state>
       </provider>
     </entry>
@@ -524,42 +497,22 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/filter.py">
       <provider selected="true" editor-type-id="text-editor">
-<<<<<<< HEAD
         <state vertical-scroll-proportion="-14.481482">
           <caret line="23" column="16" selection-start-line="23" selection-start-column="16" selection-end-line="23" selection-end-column="16" />
-=======
-        <state vertical-scroll-proportion="0.0">
-          <caret line="20" column="16" selection-start-line="20" selection-start-column="16" selection-end-line="20" selection-end-column="16" />
->>>>>>> fdfbd85a5334e517da772f19ceae6ef5fb6d1d8e
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/filter.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-<<<<<<< HEAD
           <caret line="16" column="32" selection-start-line="0" selection-start-column="0" selection-end-line="46" selection-end-column="0" />
-=======
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
->>>>>>> fdfbd85a5334e517da772f19ceae6ef5fb6d1d8e
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/filter.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-<<<<<<< HEAD
           <caret line="45" column="0" selection-start-line="45" selection-start-column="0" selection-end-line="45" selection-end-column="0" />
-=======
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/filter.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-14.481482">
-          <caret line="23" column="16" selection-start-line="23" selection-start-column="16" selection-end-line="23" selection-end-column="16" />
->>>>>>> fdfbd85a5334e517da772f19ceae6ef5fb6d1d8e
         </state>
       </provider>
     </entry>
@@ -573,18 +526,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/tp1/parser2.py">
       <provider selected="true" editor-type-id="text-editor">
-<<<<<<< HEAD
-<<<<<<< HEAD
         <state vertical-scroll-proportion="0.371875">
           <caret line="21" column="48" selection-start-line="21" selection-start-column="48" selection-end-line="21" selection-end-column="48" />
-=======
-        <state vertical-scroll-proportion="0.56198347">
-          <caret line="20" column="14" selection-start-line="20" selection-start-column="14" selection-end-line="20" selection-end-column="14" />
->>>>>>> fdfbd85a5334e517da772f19ceae6ef5fb6d1d8e
-=======
-        <state vertical-scroll-proportion="0.056198347">
-          <caret line="2" column="0" selection-start-line="2" selection-start-column="0" selection-end-line="2" selection-end-column="0" />
->>>>>>> 81f34e5123a026ce7061d5192433b239139a0e6b
           <folding>
             <element signature="e#0#23#0" expanded="true" />
           </folding>

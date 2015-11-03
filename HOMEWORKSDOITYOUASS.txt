@@ -10,9 +10,12 @@ c# 10 novembre
 <!-- devoirs -->
 crypto 11.11
 c# dosomething 3.11
+netbeans tasks
 <!-- projects -->
 <p3>
-wiki
+wiki!
+génie logiciel
+acquisition Qt
 <webgl>
 <android>
 wtf
