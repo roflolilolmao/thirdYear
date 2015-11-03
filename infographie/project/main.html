@@ -18,7 +18,7 @@
 			varying vec3 vPosition;
 			varying vec3 vLightpos;
 			uniform int vmode;
-			const vec3 lightPos = vec3(0.0, 0.0, 0.0);
+			const vec3 lightpos = vec3(0.0, 0.0, 0.0);
 		    void main(void) {
 		        vColor = aColor;
 				gl_PointSize = 4.0;
@@ -29,7 +29,7 @@
 					gl_Position = c + a;
 					vPosition = gl_Position.xyz;
 					aCenter = c.xyz;
-					vLightpos = (uPMatrix * uMVMatrix * vec4(lightPos, 1.0)).xyz;
+					vLightpos = (uPMatrix * uMVMatrix * vec4(lightpos, 1.0)).xyz;
 				}
 				else
 				{
