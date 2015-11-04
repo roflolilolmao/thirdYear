@@ -42,6 +42,8 @@
 			#ifdef GL_ES
 				precision highp float;
 			#endif
+		    uniform mat4 uMVMatrix;
+		    uniform mat4 uPMatrix;
 			varying vec4 vColor;
 			varying vec3 vPosition;
 			uniform int mode;
@@ -62,10 +64,10 @@
 					float dist = distance(center.xy, vPosition.xy);
 					float z = sqrt(r * r - dist * dist);
 					vec3 N = normalize(vec3(vPosition.x - center.x, vPosition.y - center.y, z));
-					vec3 L = normalize(lightPos - (center + N * r));
-					// vec3 V = normalize(vec3(0.0, 0.0, 1.0) - (center + N * r));
-					vec3 V = normalize(vec3(0.0, 0.0, 1.0));
-					// vec3 V = normalize((uPMatrix * uMVMatrix * vec4(vPosition, 1.0)).xyz);
+					vec3 L = normalize((center + N * r) - lightPos);
+					// vec3 V = normalize((center + N * r) - /*???*/ vec3(0.0, 0.0, 1.0));
+					vec3 V = normalize((center + N * r) - (uPMatrix * uMVMatrix * vec4(0.0, 0.0, 1.0, 1.0)).xyz);
+					// vec3 V = normalize(vec3(0.0, 0.0, 1.0));
 					vec3 R = normalize(reflect(-L, N));
 					vec3 ambientColor = vColor.xyz * amb;
 					vec3 diffuseColor = diff * vColor.xyz * (dot(L, N) - 0.5);
@@ -96,28 +98,27 @@
 				this.color = color;
 				this.pos = pos;
 				this.orbitFactor = orbitFactor;
-				this.acc = vec3.create();
+				this.acceleration = vec3.create();
 				this.update = function(planets)
 				{
-					var acc = vec3.create();
+					var a = vec3.create();
 					for(i in planets)
 					{
-						if(this.mass != planets[i].mass)
+						if(this.mass != planets[i].mass) // real clever
 						{
-							var dir = vec3.create();
-							vec3.subtract(dir, this.pos, planets[i].pos);
-							vec3.normalize(dir, dir);
-							var change = vec3.create();
-							vec3.scale(change, dir, -G * this.mass * planets[i].mass / vec3.squaredDistance(this.pos, planets[i].pos));
-							vec3.add(acc, acc, change);
+							var d = vec3.create();
+							vec3.subtract(d, this.pos, planets[i].pos);
+							var dist = vec3.dist(this.pos, planets[i].pos);
+							vec3.scale(d, d, -G * this.mass * planets[i].mass / dist / dist / dist);
+							vec3.add(a, a, d);
 						}
 					}
-					vec3.scale(acc, acc, 1 / this.mass);
-					vec3.add(this.speed, this.speed, acc);
+					vec3.scale(a, a, 1 / this.mass);
+					vec3.add(this.speed, this.speed, a);
 					var temp = vec3.create();
 					vec3.scale(temp, this.speed, slowMoFactor);
 					vec3.add(this.pos, this.pos, temp);
-					this.acc = acc;
+					this.acceleration = a;
 				}
 				this.initVecBuff = function()
 				{
@@ -132,9 +133,9 @@
 					indices.push(indices.length, indices.length + 1);
 					vertices.push(this.pos[0] / visualFactor, this.pos[1] / visualFactor, this.pos[2] / visualFactor);
 					vertices.push(
-						(this.pos[0] / visualFactor + this.acc[0] / visualFactor * 1e9),
-						(this.pos[1] / visualFactor + this.acc[1] / visualFactor * 1e9),
-						(this.pos[2] / visualFactor + this.acc[2] / visualFactor * 1e9)
+						(this.pos[0] / visualFactor + this.acceleration[0] / visualFactor * 1e9),
+						(this.pos[1] / visualFactor + this.acceleration[1] / visualFactor * 1e9),
+						(this.pos[2] / visualFactor + this.acceleration[2] / visualFactor * 1e9)
 					);
 					colors.push(1, 0, 0, 1);
 					colors.push(1, 0, 0, 1);

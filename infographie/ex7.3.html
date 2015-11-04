@@ -38,8 +38,7 @@
 				float z = sqrt(radius * radius - dist * dist);
 				vec3 N = normalize(vec3(vPosition.x - center.x, vPosition.y - center.y, z));
 				vec3 L = normalize(lightPos - (center + N * radius));
-				//vec3 V = normalize(vec3(0.0, 0.0, 1.0) - (center + N * radius));
-				vec3 V = normalize(vec3(0.0, 0.0, 1.0));
+				vec3 V = vec3(0.0, 0.0, 1.0);
 				vec3 R = normalize(reflect(-L, N));
 				vec3 ambientColor = vColor.xyz * amb;
 				vec3 diffuseColor = diff * vColor.xyz * (dot(L, N));
@@ -99,6 +98,7 @@
 			    glContext.enableVertexAttribArray(prg.colorAttribute);
 			    prg.pMatrixUniform          = glContext.getUniformLocation(prg, 'uPMatrix');
 			    prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
+				
 				prg.radius = glContext.getUniformLocation(prg, 'radius');
 				prg.spec = glContext.getUniformLocation(prg, 'spec');
 				prg.diff = glContext.getUniformLocation(prg, 'diff');
@@ -127,6 +127,7 @@
 			function drawSphere(center, radius, color)
 			{
 				initBuffers(center, radius, color);
+				
 				glContext.uniform1f(prg.spec, ispec);
 				glContext.uniform1f(prg.diff, idiff);
 				glContext.uniform1f(prg.amb, iamb);
@@ -134,6 +135,7 @@
 				glContext.uniform1f(prg.radius, radius);
 				glContext.uniform3f(prg.center, center[0], center[1], center[2]);
 				glContext.uniform3f(prg.lightpos, lightpos[0], lightpos[1], lightpos[2]);
+				
 			    glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
 			    glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
@@ -176,22 +178,22 @@
 		<div>
 			<p>Intensités</p>
 			<label>Ambiante</label>
-			<input type="range" id="amb" value="0" min="0" max="40" onchange="camb()"/>
+			<input type="range" id="amb" value="0" min="0" max="40" oninput="camb()"/>
 			<label>Diffuse</label>
-			<input type="range" id="diff" value="40" min="0" max="40" onchange="cdiff()"/>
+			<input type="range" id="diff" value="40" min="0" max="40" oninput="cdiff()"/>
 			<label>Spéculaire</label>
-			<input type="range" id="spec" value="10" min="0" max="40" onchange="cspec()"/>
+			<input type="range" id="spec" value="10" min="0" max="40" oninput="cspec()"/>
 			<label>Alpha</label>
-			<input type="range" id="alpha" value="2" min="0" max="10" onchange="calpha()"/>
+			<input type="range" id="alpha" value="2" min="0" max="10" oninput="calpha()"/>
 		</div>
 		<div>
 			<p>Position de la lumière</p>
 			<label>X:</label>
-			<input type="text" id="xtext" value="2.0" onchange="cp()"/>
+			<input type="text" id="xtext" value="2.0" oninput="cp()"/>
 			<label>Y:</label>
-			<input type="text" id="ytext" value="3.0" onchange="cp()"/>
+			<input type="text" id="ytext" value="3.0" oninput="cp()"/>
 			<label>Z:</label>
-			<input type="text" id="ztext" value="5.0" onchange="cp()"/>
+			<input type="text" id="ztext" value="5.0" oninput="cp()"/>
 		</div>
 		<br/>
 		<canvas id="webgl-canvas" width="500" height="500">
