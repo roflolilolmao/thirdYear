@@ -8,18 +8,16 @@ crypto 9 décembre
 c# 10 novembre
 
 <!-- devoirs -->
-crypto 11.11
-c# dosomething 3.11
+crypto 25.11
 netbeans tasks
+tp2 os
 <!-- projects -->
 <p3>
 wiki!
-génie logiciel
 acquisition Qt
+camera support
 <webgl>
 <android>
 wtf
 <webdev>
 holyshit
-<ai>
-maybe work a bit you fuck
