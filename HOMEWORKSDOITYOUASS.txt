@@ -5,7 +5,6 @@ listen dozer ghost things
 te1 QL 4 décembre
 te1 JEE 11 décembre
 crypto 9 décembre
-c# 10 novembre
 
 <!-- devoirs -->
 crypto 11.11
@@ -14,8 +13,8 @@ netbeans tasks
 <!-- projects -->
 <p3>
 wiki!
-génie logiciel
-acquisition Qt
+améliorer perf => openCV
+déterminer vitesse
 <webgl>
 <android>
 wtf
