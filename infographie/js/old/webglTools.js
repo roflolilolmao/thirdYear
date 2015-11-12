@@ -116,13 +116,7 @@ function getGLContext(canvasName) {
 
     for (var i = 0; i < names.length; i++) {
         try {
-			gl = canvas.getContext(names[i]); // no blending
-
-			//*** for transparency (Blending) ***
-            //gl = canvas.getContext(names[i], {premultipliedAlpha: false});
-            //gl.enable(gl.BLEND);
-            //gl.blendEquation(gl.FUNC_ADD);
-            //gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);			
+            gl = canvas.getContext(names[i]);
         } catch (e) {}
 
         if (gl) break;
@@ -135,7 +129,6 @@ function getGLContext(canvasName) {
         return gl;
     }
 }
-
 
 
 /**

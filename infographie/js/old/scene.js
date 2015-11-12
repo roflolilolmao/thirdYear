@@ -230,7 +230,7 @@ Scene.prototype.draw = function() {
 	glContext.viewport(0, 0, c_width, c_height);
 			
 	// projection
-	mat4.perspective(this.pMatrix, degToRad(60), c_width / c_height, 0.1, 1000.0);
+	mat4.perspective(60, c_width / c_height, 0.1, 10000.0, this.pMatrix);
 
 	// model view, based on camera manipulation (translation and rotation)
 	mat4.identity(this.mvMatrix);
@@ -238,9 +238,9 @@ Scene.prototype.draw = function() {
     this.mvMatrix = this.manipulation.translateModelViewMatrix(this.mvMatrix);
 
 	// normals matrix
-	mat4.copy(this.nMatrix, this.mvMatrix);
-	mat4.invert(this.nMatrix, this.nMatrix);
-	mat4.transpose(this.nMatrix, this.nMatrix);
+	mat4.set(this.mvMatrix, this.nMatrix);
+	mat4.inverse(this.nMatrix);
+	mat4.transpose(this.nMatrix);
 
 	//send the projection and model view matrices to the vertex shader
 	glContext.uniformMatrix4fv(prg.pMatrixUniform, false, this.pMatrix);

@@ -7,9 +7,9 @@ var  VISUAL_FACTOR = 10;
 var MASS_FACTOR = 1e24 / ASTRONOMICAL_UNIT / ASTRONOMICAL_UNIT;
 var POSITION_FACTOR = 1e9 / ASTRONOMICAL_UNIT;
 var SPEED_FACTOR = 1 / ASTRONOMICAL_UNIT;
-function Planet(mass, speed, pos, radius, color, orbitFactor, context)
+
+function Planet(mass, speed, pos, radius, color, orbitFactor)
 {
-	this.context = context;
 	this.radius = radius;
 	this.mass = mass;
 	this.speed = speed;
@@ -19,91 +19,35 @@ function Planet(mass, speed, pos, radius, color, orbitFactor, context)
 }
 Planet.prototype.update = function(mainBody)
 {
-	var a = vec3.create(); // acceleration vector
-	var d = vec3.create(); // direction vector
-	vec3.subtract(d, mainBody.pos, this.pos);
-	var dist = vec3.dist(mainBody.pos, this.pos);
-	vec3.scale(a, d, mainBody.mass / (dist * dist * dist) * deltaT); // dist ^ 3 for normalization
-	
-	vec3.add(this.speed, this.speed, a);
-	var deltaPos = vec3.create();
-	vec3.scale(deltaPos, this.speed, SPEED_FACTOR * deltaT);
-	vec3.add(this.pos, this.pos, deltaPos);
-	if(this.mass == earth.mass)
-	{
-		console.clear();
-		console.log('pos',this.pos);
-		console.log('speed',this.speed);
-	}
+	newtonGravitation(mainBody, this);
 }
-Planet.prototype.draw = function()
+Planet.prototype.draw = function(mainBodyPos)
 {
-	vertices = [];
-	indices = [];
-	colors = [];
-	
-	var c = [this.pos[0] / VISUAL_FACTOR, this.pos[1] / VISUAL_FACTOR, this.pos[2] / VISUAL_FACTOR];
-	var radius = this.radius;
-	vertices.push(
-		c[0] + radius,
-		c[1] + radius,
-		c[2]
-	);
-	vertices.push(
-		c[0] - radius,
-		c[1] + radius,
-		c[2]
-	);
-	vertices.push(
-		c[0] + radius,
-		c[1] - radius,
-		c[2]
-	);
-	vertices.push(
-		c[0] - radius,
-		c[1] - radius,
-		c[2]
-	);
-	colors.push(this.color[0], this.color[1], this.color[2], 1.0);
-	colors.push(this.color[0], this.color[1], this.color[2], 1.0);
-	colors.push(this.color[0], this.color[1], this.color[2], 1.0);
-	colors.push(this.color[0], this.color[1], this.color[2], 1.0);
-	indices.push(0, 1, 2, 3);
-	
 	if(this.mass == sol.mass)
 	{
-		this.context.uniform1i(prg.fmode, 2);
-		this.context.uniform1i(prg.vmode, 2);
+		glContext.uniform1i(prg.fmode, 2);
+		glContext.uniform1i(prg.vmode, 2);
 	}
 	else
 	{
-		this.context.uniform1i(prg.fmode, 1);
-		this.context.uniform1i(prg.vmode, 1);
+		glContext.uniform1i(prg.fmode, 1);
+		glContext.uniform1i(prg.vmode, 1);
 	}
-		
-	this.context.uniform1f(prg.radius, radius);
-	this.context.uniform3f(prg.center, c[0], c[1], 0.0);
+	var c = [
+		(this.pos[0] + mainBodyPos[0]) / VISUAL_FACTOR,
+		(this.pos[1] + mainBodyPos[1]) / VISUAL_FACTOR,
+		(this.pos[2] + mainBodyPos[2]) / VISUAL_FACTOR
+	];
+	glContext.uniform1f(prg.radius, this.radius);
+	glContext.uniform3f(prg.center, c[0], c[1], 0.0);
+	glContext.uniform3f(prg.colorPlanet, this.color[0], this.color[1], this.color[2]);
 	
-	vertexBuffer = getVertexBufferWithVertices(vertices);
-	indexBuffer = getIndexBufferWithIndices(indices);
-	colorBuffer = getVertexBufferWithVertices(colors);
-	this.context.bindBuffer(this.context.ARRAY_BUFFER, vertexBuffer);
-	this.context.vertexAttribPointer(prg.vertexPositionAttribute, 3, this.context.FLOAT, false, 0, 0);
-	this.context.bindBuffer(this.context.ARRAY_BUFFER, colorBuffer);
-	this.context.vertexAttribPointer(prg.colorAttribute, 4, this.context.FLOAT, false, 0, 0);
-	this.context.bindBuffer(this.context.ELEMENT_ARRAY_BUFFER, indexBuffer);
-	this.context.drawElements(this.context.TRIANGLE_STRIP, indices.length, this.context.UNSIGNED_SHORT,0);
+	glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+
+	//console.log(this.color);
 }
 Planet.prototype.drawOrbit = function(mainBody)
 {
-	vertices = [];
-	indices = [];
-	colors = [];
-	
-	vertices.push(this.pos[0] / VISUAL_FACTOR, this.pos[1] / VISUAL_FACTOR, this.pos[2] / VISUAL_FACTOR);
-	indices.push(indices.length);
-	colors.push(this.color[0], this.color[1], this.color[2], 1.0);
-	
 	var s = vec3.create();
 	var p = vec3.create();
 	vec3.copy(s, this.speed);
@@ -120,59 +64,65 @@ Planet.prototype.drawOrbit = function(mainBody)
 		vec3.scale(deltaPos, s, SPEED_FACTOR * this.orbitFactor * deltaT);
 		vec3.add(p, p, deltaPos);
 		
-		vertices.push(p[0] / VISUAL_FACTOR, p[1] / VISUAL_FACTOR, p[2] / VISUAL_FACTOR);
-		indices.push(indices.length);
-		colors.push(this.color[0], this.color[1], this.color[2], 1.0);
 	}
-
-	vertexBuffer = getVertexBufferWithVertices(vertices);
-	indexBuffer = getIndexBufferWithIndices(indices);
-	colorBuffer = getVertexBufferWithVertices(colors);
 	
-	this.context.bindBuffer(this.context.ARRAY_BUFFER, vertexBuffer);
-	this.context.vertexAttribPointer(prg.vertexPositionAttribute, 3, this.context.FLOAT, false, 0, 0);
-	this.context.bindBuffer(this.context.ARRAY_BUFFER, colorBuffer);
-	this.context.vertexAttribPointer(prg.colorAttribute, 4, this.context.FLOAT, false, 0, 0);
-	this.context.bindBuffer(this.context.ELEMENT_ARRAY_BUFFER, indexBuffer);
-	this.context.drawElements(this.context.LINE_STRIP, indices.length, this.context.UNSIGNED_SHORT,0);
+	glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
 }
 
-function System(mainBody, bodies)
+function System(orbitBody, bodies, mainBody)
 {
-	this.mainBody = mainBody;
+	this.orbitBody = orbitBody;
 	this.bodies = bodies;
+	this.mainBody = mainBody;
 	this.mass = 0;
 	for (i in bodies)
 	{
 		this.mass += bodies[i].mass;
 	}
-	this.speed = mainBody.speed;
-	this.pos = mainBody.pos;
-	this.orbitFactor = mainBody.orbitFactor;
+	this.speed = orbitBody.speed;
+	this.pos = orbitBody.pos;
+	orbitBody.pos = [0, 0, 0];
+	this.orbitFactor = orbitBody.orbitFactor;
 }
-System.prototype = Planet.prototype;
+System.prototype = Object.create(Planet.prototype);
 System.prototype.constructor = System;
-System.prototype.updateBodies = function ()
+System.prototype.update = function ()
 {
+	if(this.mainBody != null)
+		newtonGravitation(this.mainBody, this);
 	for(i in this.bodies)
 	{
-		this.bodies[i].update(this.mainBody);
+		this.bodies[i].update(this.orbitBody);
 	}
 }
-System.prototype.drawBodies = function ()
+System.prototype.draw = function ()
 {
-	this.mainBody.draw();
+	this.orbitBody.draw(this.pos);
 	for(i in this.bodies)
 	{
-		this.bodies[i].draw();
+		this.bodies[i].draw(this.pos);
 	}
 }
-System.prototype.drawOrbitBodies = function ()
+System.prototype.drawOrbit = function ()
 {
 	for(i in this.bodies)
 	{
-		this.bodies[i].drawOrbit(this.mainBody);
+		this.bodies[i].drawOrbit(this.orbitBody);
 	}
+}
+
+function newtonGravitation(mainBody, orbitBody)
+{
+	var a = vec3.create(); // acceleration vector
+	var d = vec3.create(); // direction vector
+	vec3.subtract(d, mainBody.pos, orbitBody.pos);
+	var dist = vec3.dist(mainBody.pos, orbitBody.pos);
+	vec3.scale(a, d, mainBody.mass / (dist * dist * dist) * deltaT); // dist ^ 3 for normalization
+	
+	vec3.add(orbitBody.speed, orbitBody.speed, a);
+	var deltaPos = vec3.create();
+	vec3.scale(deltaPos, orbitBody.speed, SPEED_FACTOR * deltaT);
+	vec3.add(orbitBody.pos, orbitBody.pos, deltaPos);
 }
 function createPlanet(mass, speed, position, radius, color, orbitFactor, glContext)
 {

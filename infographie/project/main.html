@@ -8,10 +8,9 @@
 		<script src="../js/webglTools.js"></script>
 		<script src="scene.js"></script>
 		<script src="planet.js"></script>
-		
 		<script id="shader-vs" type="x-shader/x-vertex">
 			attribute vec3 aVertexPosition;
-			attribute vec4 aColor;
+			//attribute vec4 aColor;
 		    uniform mat4 uMVMatrix;
 		    uniform mat4 uPMatrix;
 			uniform vec3 center;
@@ -19,14 +18,17 @@
 			varying vec4 vColor;
 			varying vec3 vPosition;
 			varying vec3 vLightpos;
+			uniform float radius;
 			uniform int vmode;
+			uniform vec3 uColor;
 			const vec3 lightpos = vec3(0.0, 0.0, 0.0);
 		    void main(void) {
-		        vColor = aColor;
+				//vColor = aColor;
+		        vColor = vec4(uColor, 1.0);
 				gl_PointSize = 4.0;
 				if(vmode != 0) // billboards
 				{
-					vec4 a = uPMatrix * vec4(aVertexPosition - center, 1.0);
+					vec4 a = uPMatrix * vec4(aVertexPosition * radius, 1.0);
 					vec4 c = uPMatrix * uMVMatrix * vec4(center, 1.0);
 					gl_Position = c + a;
 					vPosition = gl_Position.xyz;
@@ -35,8 +37,8 @@
 				}
 				else
 				{
-					gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-					vPosition = aVertexPosition;
+					gl_Position = uPMatrix * uMVMatrix * vec4(center, 1.0);
+					vPosition = center;
 				}
 			}
 		</script>
@@ -79,8 +81,7 @@
 						gl_FragColor = vec4(ambientColor + diffuseColor + specularColor, 1.0);
 						// radius < distance(center.xy, vPosition.xy) ? gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0) : 
 						// gl_FragColor = vec4(vColor.xyz, step(dist, r));	
-					}					
-					
+					}
 				}
 				else if(fmode == 2) // sun
 				{

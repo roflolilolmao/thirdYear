@@ -178,14 +178,14 @@ Manipulation.prototype.handleKeyDown = function(event) {
 * Translates the given model-view matrix by the current manipulation translation
 */
 Manipulation.prototype.translateModelViewMatrix = function (mvMatrix) {
-	return mat4.translate(mvMatrix, mvMatrix, [-this.posX, -this.posY, -this.posZ]);
+	return mat4.translate(mvMatrix, [-this.posX, -this.posY, -this.posZ]);
 };
 
 /*
 * Rotates the given model-view matrix by the current pitch and yaw of the camera
 */
 Manipulation.prototype.rotateModelViewMatrix = function(mvMatrix) {
-	mat4.rotate(mvMatrix, mvMatrix, degToRad(-this.pitch), [1, 0, 0]);
-    mat4.rotate(mvMatrix, mvMatrix, degToRad(-this.yaw), [0, 1, 0]);
+	mat4.rotate(mvMatrix, degToRad(-this.pitch), [1, 0, 0]);
+    mat4.rotate(mvMatrix, degToRad(-this.yaw), [0, 1, 0]);
 	return mvMatrix;
 };
