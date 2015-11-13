@@ -1,0 +1,22 @@
+﻿<!-- most important -->
+listen dozer ghost things 
+
+<!-- tests -->
+te1 QL 4 décembre
+te1 JEE 11 décembre
+crypto 9 décembre
+
+<!-- devoirs -->
+crypto 25.11
+netbeans tasks
+tp2 os
+<!-- projects -->
+<p3>
+wiki!
+améliorer perf => openCV
+camera support
+<webgl>
+<android>
+wtf
+<webdev>
+holyshit

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec4 aColor;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			varying vec4 vColor;
+			uniform vec2 uP0;
+			uniform vec2 uP1;
+			uniform vec2 uP2;
+			void main(void) {
+				vColor = aColor;
+				if (aVertexPosition.z != 0.0){
+					gl_PointSize = 5.0;
+					vColor = vec4(1.0, 0.0, 0.0, 1.0);
+					gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+				}else{
+					float t = aVertexPosition.x;
+					vec2 B_t = (1.0 - t) * ((1.0 - t) * uP0 +  t * uP1) + t * ((1.0 - t) * uP1 + t * uP2);
+					vec3 newVertexPos = vec3(B_t, 0.0);
+					gl_Position = uPMatrix * uMVMatrix * vec4(newVertexPos, 1.0);
+				}
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+				precision highp float;
+			#endif
+			varying vec4 vColor;
+			void main(void) {
+				gl_FragColor = vColor;
+			}
+		</script>
+		<script>
+			var maxPoints = 3;
+			window.onkeydown = checkKey;
+			var focusOnControlPoints = false;
+			var vertexBuffer = null;
+			var indexBuffer = null;
+			var colorBuffer = null;
+			var pointsColorBuffer = null;
+			var pointsBuffer = null;
+			var pointsIndexBuffer = null;
+			var indices = [];
+			var vertices = [];
+			var colors = [];
+			var PointCoordinates = [];
+			var pointsIndices = [];
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();
+			function checkKey(ev){
+				switch(ev.keyCode){
+					case 173:
+					case 109:{
+						if (maxPoints >1) --maxPoints;
+						initBuffers();
+						break;
+					}
+					case 49:
+					case 107:{
+						if (maxPoints <20) ++maxPoints;
+						initBuffers();
+						break;
+					}
+					case 65:{
+						PointCoordinates[3] -= 0.01;
+						initBuffers();
+						break;
+					}
+					case 68:{
+						PointCoordinates[3] += 0.01;
+						initBuffers();
+						break;
+					}
+					case 87:{
+						PointCoordinates[4] += 0.01;
+						initBuffers();
+						break;
+					}
+					case 83:{
+						PointCoordinates[4] -= 0.01;
+						initBuffers();
+						break;
+					}
+					case 84:{
+						focusOnControlPoints = !focusOnControlPoints;
+						initBuffers();
+						break;
+					}
+					default:
+					  console.log(ev.keyCode);
+					break;
+				}
+			}
+			function initShaderParameters(prg){
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				prg.colorAttribute 			= glContext.getAttribLocation(prg, "aColor");
+				glContext.enableVertexAttribArray(prg.colorAttribute);
+				prg.pMatrixUniform          = glContext.getUniformLocation(prg, 'uPMatrix');
+				prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
+				prg.p0Uniform         = glContext.getUniformLocation(prg, 'uP0');
+				prg.p1Uniform         = glContext.getUniformLocation(prg, 'uP1');
+				prg.p2Uniform         = glContext.getUniformLocation(prg, 'uP2');
+			}
+			function initBuffers(){
+				indices = [];
+				vertices = [];
+				colors = [];
+				for (i = 0.0; i <= maxPoints; i++){
+					vertices.push(1.0/maxPoints * i, 0, 0);
+					indices.push(i);
+					colors.push(0.0, i/maxPoints, 0.0, 1.0);
+				}
+				vertexBuffer = getVertexBufferWithVertices(vertices);
+				indexBuffer = getIndexBufferWithIndices(indices);
+				colorBuffer = getVertexBufferWithVertices(colors);
+				colorsAuxArray = [];
+				for(i = 0; i < pointsIndices.length; i++){
+					colorsAuxArray.push(0,0,0,1);
+				}
+				pointsColorBuffer = getVertexBufferWithVertices(colorsAuxArray);
+				pointsBuffer = getVertexBufferWithVertices(PointCoordinates);
+				pointsIndexBuffer = getIndexBufferWithIndices(pointsIndices);
+			}
+			function drawControlPoints(){
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, pointsColorBuffer);
+				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, pointsBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, pointsIndexBuffer);
+				glContext.drawElements(glContext.POINTS, pointsIndices.length, glContext.UNSIGNED_SHORT, 0);
+				if( focusOnControlPoints )
+					glContext.drawElements(glContext.LINE_STRIP, pointsIndices.length, glContext.UNSIGNED_SHORT, 0);
+			}
+			function drawBezierCurve(){
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
+				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+				if(focusOnControlPoints)
+					glContext.drawElements(glContext.POINTS, indices.length, glContext.UNSIGNED_SHORT,0);
+				else
+					glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+			}
+			function drawScene(){
+				glContext.clearColor(0.9, 0.9, 1.0, 1.0);
+				glContext.enable(glContext.DEPTH_TEST);
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				glContext.viewport(0, 0, c_width, c_height);
+				mat4.ortho(pMatrix, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+				mat4.identity(mvMatrix);
+				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
+				if (PointCoordinates.length == 12){
+					var p0 = [];
+					var p1 = [];
+					var p2 = [];
+					p0.push(PointCoordinates[0], PointCoordinates[1]);
+					p1.push(PointCoordinates[3], PointCoordinates[4]);
+					p2.push(PointCoordinates[6], PointCoordinates[7]);
+					glContext.uniform2fv(prg.p0Uniform, p0);
+					glContext.uniform2fv(prg.p1Uniform, p1);
+					glContext.uniform2fv(prg.p2Uniform, p2);
+				}
+				if( PointCoordinates.length > 2 )
+				  drawControlPoints();
+				if( PointCoordinates.length == 12 )
+				  drawBezierCurve();
+			}
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				initProgram();
+				initBuffers();
+				renderLoop();
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<script>displayTitle("Ch.06 E.g.1 : Courbes quadratiques de Bezier", 1,1,1,1,1,1,1);</script>
+		<p>	Définir les trois points de contrôle en cliquant à trois endroits dans le canevas, puis pour modifier la courbe utiliser les touches suivantes :
+		<br>'-' ou '+' pour réduire ou augmenter la résolution de la courbe
+		<br>'a', 'w', 's' et 'd' pour bouger le point de contrôle central
+		<br>'t' pour changer l'apparence de la courbe de Bézier
+		</p>
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+	</body>
+	<script id='code-js' type="text/javascript">
+		function addPointOnGLScene(pX,pY){
+			if (PointCoordinates.length >= 12){
+				PointCoordinates = [];
+				pointsIndices = [];
+			}
+			PointCoordinates.push(pX,pY, 0.5);
+			pointsIndices.push(pointsIndices.length);
+			initBuffers();
+		}
+		function getMousePos(canvas, evt) {
+			var rect = canvas.getBoundingClientRect();
+			return {
+			  x: evt.clientX - rect.left,
+			  y: evt.clientY - rect.top
+			};
+		}
+		var canvas = document.getElementById('webgl-canvas');
+		canvas.addEventListener('mousedown', function(evt) {
+			if (evt.button === 2){
+				PointCoordinates = [];
+				pointsIndices = [];
+			} else {
+				var mousePos = getMousePos(canvas, evt);
+				var pX = (mousePos.x - canvas.width/2.0) / canvas.width * 2.0;
+				var pY = (canvas.height/2.0 - mousePos.y) / canvas.height * 2.0;
+				var message = 'point: ' + pX + ',' + pY;
+				console.log(message);
+				addPointOnGLScene(pX,pY);
+			}
+		}, false);
+		canvas.addEventListener('contextmenu', function(e) {
+			if (e.button === 2) {
+				e.preventDefault();
+				return false;
+			}
+		}, false);
+	</script>
+</html>

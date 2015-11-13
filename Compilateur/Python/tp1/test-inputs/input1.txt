@@ -1,0 +1,4 @@
+toto = 12*-3+4;
+a = toto+1; print 2*a;
+b = a*2;
+print b

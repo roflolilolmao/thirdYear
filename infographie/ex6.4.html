@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec4 aColor;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			varying vec4 vColor;
+			void main(void) {
+				vColor = aColor;
+				if (aVertexPosition.z != 0.0){
+					gl_PointSize = 5.0;
+					vColor = vec4(1.0, 0.0, 0.0, 1.0);
+					gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+				}else{
+					gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+				}
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+				precision highp float;
+			#endif
+			varying vec4 vColor;
+			void main(void) {
+				gl_FragColor = vColor;
+			}
+		</script>
+		<script>
+			var maxPoints = 200;
+			var focusOnControlPoints = false;
+			var vertexBuffer = null;
+			var indexBuffer = null;
+			var colorBuffer = null;
+			var pointsColorBuffer = null;
+			var pointsBuffer = null;
+			var pointsIndexBuffer = null;
+			var indices = [];
+			var vertices = [];
+			var colors = [];
+			var PointCoordinates = [];
+			var pointsIndices = [];
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();
+			function initShaderParameters(prg){
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				prg.colorAttribute 			= glContext.getAttribLocation(prg, "aColor");
+				glContext.enableVertexAttribArray(prg.colorAttribute);
+				prg.pMatrixUniform          = glContext.getUniformLocation(prg, 'uPMatrix');
+				prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
+			}
+			function pascal(i){ //i = depth
+				var coeff = [];
+				if(i > 0){
+					var coeffs = pascal(i - 1);
+					coeff[0] = 1;
+					coeff[i - 1] = 1;
+					for(var j = 1; j < i - 1; j++){
+						coeff[j] = coeffs[j] + coeffs[j - 1];
+					}
+				}
+				return coeff;
+			}
+			function initBuffers(){
+				indices = [];
+				vertices = [];
+				colors = [];
+				var coeff = pascal(pointsIndices.length);
+				for (i = 0; i <= maxPoints; i++){
+					var t = i / maxPoints;
+					var t1 = 1.0 - t;
+					var sumx = 0.0;
+					var sumy = 0.0;
+					for(var k = 0; k < pointsIndices.length; k++){
+						var sumt = 1.0;
+						var sumt1 = 1.0;
+						for(var j = 0; j < k; j++){
+							sumt *= t;
+						}
+						for(var j = 0; j < pointsIndices.length - k - 1; j++){
+							sumt1 *= t1;
+						}
+						var sum = sumt * sumt1 * coeff[k];
+						sumx += sum * PointCoordinates[k * 3];
+						sumy += sum * PointCoordinates[k * 3 + 1];
+					}
+					vertices.push(sumx, sumy, 0.0);
+					indices.push(i);
+					colors.push(0.0, t, 0.0, 1.0);
+				}
+				vertexBuffer = getVertexBufferWithVertices(vertices);
+				indexBuffer = getIndexBufferWithIndices(indices);
+				colorBuffer = getVertexBufferWithVertices(colors);
+				colorsAuxArray = [];
+				for(i = 0; i < pointsIndices.length; i++){
+					colorsAuxArray.push(0,0,0,1);
+				}
+				pointsColorBuffer = getVertexBufferWithVertices(colorsAuxArray);
+				pointsBuffer = getVertexBufferWithVertices(PointCoordinates);
+				pointsIndexBuffer = getIndexBufferWithIndices(pointsIndices);
+			}
+			function drawControlPoints(){
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, pointsColorBuffer);
+				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, pointsBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, pointsIndexBuffer);
+				glContext.drawElements(glContext.POINTS, pointsIndices.length, glContext.UNSIGNED_SHORT, 0);
+				if( focusOnControlPoints )
+					glContext.drawElements(glContext.LINE_STRIP, pointsIndices.length, glContext.UNSIGNED_SHORT, 0);
+			}
+			function drawBezierCurve(){
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
+				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+				if(focusOnControlPoints)
+					glContext.drawElements(glContext.POINTS, indices.length, glContext.UNSIGNED_SHORT,0);
+				else
+					glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+			}
+			function drawScene(){
+				glContext.clearColor(0.9, 0.9, 1.0, 1.0);
+				glContext.enable(glContext.DEPTH_TEST);
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				glContext.viewport(0, 0, c_width, c_height);
+				mat4.ortho(pMatrix, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+				//mat4.perspective(60.0, c_width / c_height, 0.1, 10000.0, pMatrix);
+				mat4.identity(mvMatrix);
+				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
+				
+				if( PointCoordinates.length > 2 )
+				  drawControlPoints();
+				drawBezierCurve();
+			}
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				initProgram();
+				initBuffers();
+				renderLoop();
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+	</body>
+	<script id='code-js' type="text/javascript">
+		function addPointOnGLScene(pX, pY){	
+			PointCoordinates.push(pX, pY, 0.5);
+			pointsIndices.push(pointsIndices.length);
+			initBuffers();
+		}
+		function getMousePos(canvas, evt) {
+			var rect = canvas.getBoundingClientRect();
+			return {
+			  x: evt.clientX - rect.left,
+			  y: evt.clientY - rect.top
+			};
+		}
+		var canvas = document.getElementById('webgl-canvas');
+		canvas.addEventListener('mousedown', function(evt) {
+			if (evt.button === 2){
+				PointCoordinates = [];
+				pointsIndices = [];
+				initBuffers();
+			} else {
+				var mousePos = getMousePos(canvas, evt);
+				var pX = (mousePos.x - canvas.width/2.0) / canvas.width * 2.0;
+				var pY = (canvas.height/2.0 - mousePos.y) / canvas.height * 2.0;
+				addPointOnGLScene(pX,pY);
+			}
+		}, false);
+		canvas.addEventListener('contextmenu', function(e) {
+			if (e.button === 2) {
+				e.preventDefault();
+				return false;
+			}
+		}, false);
+	</script>
+</html>

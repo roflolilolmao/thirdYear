@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec4 aColor;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			varying vec4 vColor;
+			void main(void) {
+				vColor = aColor;
+				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+				precision highp float;
+			#endif
+			varying vec4 vColor;
+			void main(void) {
+				gl_FragColor = vColor;
+			}
+		</script>
+		<script>
+			var vertexBuffer = null;
+			var indexBuffer = null;
+			var colorBuffer = null;
+			var indices = [];
+			var vertices = [];
+			var colors = [];
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();			
+			function initShaderParameters(prg){
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				prg.colorAttribute = glContext.getAttribLocation(prg, "aColor");
+				glContext.enableVertexAttribArray(prg.colorAttribute);
+				prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
+				prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
+			}
+			var a = 0;
+			var nbTriangles = 6.0;
+			var bool = false;
+			function drawTriangle(e, b, h, c, alpha)
+			{
+				var x1 = 0.0;
+				var y1 = h - b;
+				var x2 = -e / 2.0;
+				var y2 = -b;
+				var x3 = e / 2.0;
+				var y3 = -b;
+				var m11 = Math.cos(alpha);
+				var m12 = -Math.sin(alpha);
+				var m21 = Math.sin(alpha);
+				var m22 = Math.cos(alpha);
+				vertices.push(x1 * m11 + y1 * m12, x1 * m21 + y1 * m22, c-0.9);
+				vertices.push(x2 * m11 + y2 * m12, x2 * m21 + y2 * m22, c-0.9);
+				vertices.push(x3 * m11 + y3 * m12, x3 * m21 + y3 * m22, c-0.9);
+			}
+			function drawTriangles(e, c, alpha){
+				var h = e * Math.sin(Math.PI / 3.0);
+				var b = e / 2.0 * Math.tan(Math.PI / 6.0);
+				var p = Math.PI / 3.0 / nbTriangles;
+				//var p = 0.165
+				var ep = e * p;
+				var epp = e * (1.0 - p);
+				var beta =  Math.PI * 2.0 / 3.0 - Math.asin(ep / epp * Math.sin(Math.PI / 3.0));
+				var eb = epp * Math.sin(Math.PI / 3.0) / Math.sin(beta);
+				drawTriangle(e, b, h, c, alpha);
+				colors.push(0.0, 0.0, 1.0, c);
+				colors.push(0.0, 0.0, 1.0, c);
+				colors.push(0.0, 0.0, 1.0, 0.0);
+				indices.push(a++, a++, a++);
+				if (c > 0.01) drawTriangles(eb, c - 1.0 / nbTriangles, alpha + beta);
+			}
+			function initBuffers(){
+				drawTriangles(1.6, 1.0, 0.0);
+				vertexBuffer = getVertexBufferWithVertices(vertices);
+				colorBuffer = getVertexBufferWithVertices(colors);
+				indexBuffer = getIndexBufferWithIndices(indices);
+			}
+			var c = [0.13, 0.0];
+			function camera()
+			{
+				var r = 1.0;
+				var phi = 0.015;
+				var xa = Math.cos(Math.PI * phi) * r;
+				var xb = Math.sin(Math.PI * phi) * r;
+				c[0] = (c[0] * xa - c[1] * xb);
+				c[1] = (c[0] * xb + c[1] * xa);
+				console.log(c[0] + " " + c[1]);
+				mat4.translate(mvMatrix, mvMatrix, [c[0], c[1], 0.0]);
+				mat4.rotate(mvMatrix, mvMatrix, 0.1, [-c[0], -c[1], 0.0]);
+			}
+			function checkTest()
+			{
+				bool = !bool;
+			}
+			function drawScene(){
+				glContext.clearColor(0.1, 0.1, 0.1, 1.0);
+				glContext.enable(glContext.DEPTH_TEST);
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				//WHERE
+				glContext.viewport(0, 0, c_width, c_height);
+				//HOW
+				mat4.identity(pMatrix);
+				mat4.identity(mvMatrix);
+				if(bool)camera();
+				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
+				//WHAT
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
+				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+				//ORDER
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+				//SHAPE
+				glContext.drawElements(glContext.TRIANGLES, indices.length, glContext.UNSIGNED_SHORT,0);
+			}
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				initProgram();
+				initBuffers();
+				renderLoop();
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<br/>
+		Salut c'est un triangle
+		<br/>
+		<input type="button" value="test" onclick="checkTest();"/>
+		<br/>
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+	</body>
+</html>

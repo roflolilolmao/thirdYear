@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/o/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script src="js/marchingCubes.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec3 aVertexNormal;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			uniform mat4 uNMatrix;
+			uniform vec3 uLightPosition;
+			varying vec3 vNormal;
+			varying vec3 vLightRay;
+			void main(void) {
+				vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);
+			    vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
+			    vec4 light = vec4(uLightPosition,1.0);
+			    vLightRay = vertex.xyz - light.xyz;
+			    gl_Position = uPMatrix * vertex;
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+			precision highp float;
+			#endif
+			uniform int uRenderType;
+			varying vec3 vNormal;
+			varying  vec3 vLightRay;
+			void main(void){
+				vec3 clrL1 = vec3(1.,0.,0.);
+				vec3 clrL2 = vec3(0.,1.,0.);
+				vec3 clrL3 = vec3(0.,0.,1.);
+				vec3 finalColor;
+				vec3 L = normalize(vLightRay);
+				vec3 N = normalize(vNormal);
+				float lambertTerm = dot(N,-L);
+				float l1 = 0.5;
+				float l2 = 0.9;
+				float l3 = 1.0;
+				if (uRenderType == 0){
+					gl_FragColor = vec4(N.xyz, 1.0);
+				}else if (uRenderType == 1){
+					if (lambertTerm <= l1){
+						finalColor = lambertTerm/l1 * (clrL1);
+					}else if (lambertTerm <= l2){
+						finalColor = clrL1 + lambertTerm/l2 * (clrL2);
+					}else {
+						finalColor =  clrL1 + clrL2 + lambertTerm/l3 * (clrL3 );
+					}
+					gl_FragColor = vec4(finalColor, 1.0);
+				}else{
+					clrL1 = vec3(0.,0.,0.);
+				    clrL2 = vec3(1.,0.5,1.);
+					clrL3 = vec3(0.1,0.8,0.8);
+					float l1 = 0.5;
+					float l2 = 0.9;
+					float l3 = 1.0;
+					if (lambertTerm <= l1){
+						finalColor = lambertTerm/l1 * (clrL1);
+					}else if (lambertTerm <= l2){
+						finalColor = lambertTerm/l2 * (clrL2);
+					}else {
+						finalColor = lambertTerm/l3 * (clrL3 );
+					}
+					gl_FragColor = vec4(finalColor, 1.0);
+				}
+			}
+		</script>
+		<script>
+			var vertexBuffersArray = [];
+			var normalBuffersArray = [];
+			var numItems = [];
+			var renderingMode = 1;
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();
+			var nMatrix = mat4.create();
+			var currentRy = 0;
+			var tx = 0;
+			var ty = 0;
+			var tz = -5;
+			var renderType = 0;
+			var currentIso = 0.0;
+			window.onkeydown = checkKey;
+			function checkKey(ev){
+				switch(ev.keyCode){
+					case 87: tz+=0.1; break;
+					case 83: tz-=0.1; break;
+					case 68: tx+=0.1; break;
+					case 65: tx-=0.1; break;
+					case 82: ty+=0.1; break;
+					case 70: ty-=0.1; break;
+				default:
+					  console.log(ev.keyCode);
+					break;
+				}
+			}
+			function initShaderParameters(prg){
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+			    glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+			    prg.vertexNormalAttribute = glContext.getAttribLocation(prg, "aVertexNormal");
+			    glContext.enableVertexAttribArray(prg.vertexNormalAttribute);
+			    prg.pMatrixUniform             = glContext.getUniformLocation(prg, 'uPMatrix');
+			    prg.mvMatrixUniform            = glContext.getUniformLocation(prg, 'uMVMatrix');
+			    prg.nMatrixUniform             = glContext.getUniformLocation(prg, 'uNMatrix');
+			    prg.lightPositionUniform       = glContext.getUniformLocation(prg, 'uLightPosition');
+				prg.renderTypeUniform		   = glContext.getUniformLocation(prg, 'uRenderType');
+			}
+			function setupGeometry(){
+				vertexBuffersArray = [];
+				normalBuffersArray = [];
+			 	numItems = [];
+			 	EVALUATE_SPHERE = 1;
+				vertices = generateSurfacePoints(0.0);
+				vertexNormals = calculateNormalsForVertices(vertices);
+				vertexBuffer = getVertexBufferWithVertices(vertices);
+				normalsBuffer = getVertexBufferWithVertices(vertexNormals);
+				vertexBuffersArray.push(vertexBuffer);
+				normalBuffersArray.push(normalsBuffer);
+				numItems.push(vertices.length/3);
+			}
+			function initLights(){
+			    glContext.uniform3f(prg.lightPositionUniform, 0, 0, 1);
+			}
+			function drawObject(modelViewMatrix, vertexBuffer, normalsBuffer, numItems, glPrimitive){
+			    glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, modelViewMatrix);
+			    mat4.set(modelViewMatrix, nMatrix);
+			    mat4.inverse(nMatrix);
+			    mat4.transpose(nMatrix);
+			    glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, normalsBuffer);
+				glContext.vertexAttribPointer(prg.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.drawArrays(glPrimitive, 0, numItems);
+			}
+			function startRenderLoop(){
+				initLights();
+				mat4.identity(mvMatrix);
+				renderLoop();
+			}
+			function drawScene(){
+				glContext.clearColor(0.9, 0.9, 1.0, 1.0);
+				glContext.enable(glContext.DEPTH_TEST);
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				glContext.viewport(0, 0, c_width, c_height);
+			    mat4.perspective(60, c_width / c_height, 0.1, 100.0, pMatrix);
+			    glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				if(vertexBuffersArray.length > 0){
+					translationMat = mat4.create();
+					mat4.identity(translationMat);
+					mat4.translate(translationMat, [tx, ty, tz]);
+					rotateModelViewMatrixUsingQuaternion();
+					var modelViewMatrix = mat4.multiply(translationMat, mvMatrix);
+					glContext.uniform1i(prg.renderTypeUniform, renderType);
+					if( renderingMode )
+						drawObject(modelViewMatrix, vertexBuffersArray[0],
+							normalBuffersArray[0], numItems[0], glContext.TRIANGLES);
+					else
+						drawObject(modelViewMatrix, vertexBuffersArray[0],
+							normalBuffersArray[0], numItems[0], glContext.LINES);
+				}
+			}
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				initProgram();
+				setupGeometry();
+				startRenderLoop();
+			}
+			function setCoefficients(){
+				a = parseFloat(document.getElementById("sliderA").value);
+				coefficients.x = a;
+				setupGeometry();
+			}
+			function switchWireframeFilledTriangle(){
+				renderingMode = !renderingMode;
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<script>displayTitle("Ch.07 E.g.4 : Une sphère avec Marching", 0,1,1,1);</script>
+		<br />
+		x<sup>2</sup> + y<sup>2</sup> + z<sup>2</sup> = R
+		<p>Rotation avec la souris, translation: X: [a,d]: Y: [r,f] Z: [w,s]</p>
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+		<p>R: 0.01<input type="range" id="sliderA" value="0.5" min="0.01" max="5.0" step="0.01" onChange="setCoefficients();">5</p>
+		<span id="button1"><button onclick="switchWireframeFilledTriangle()"> Changer le type de rendu </button></span>
+		<script src='./js/o/mouseMotionHandling.js'></script>
+		<br />
+		<script>
+			document.getElementById("sliderA").value = 0.5;
+			setCoefficients('A');
+		</script>
+	</body>
+</html>

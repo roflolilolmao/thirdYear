@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec4 aColor;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			varying vec4 vColor;
+			
+			void main(void)
+			{
+				vColor = aColor;
+				gl_PointSize = 3.0;
+				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+			}
+		</script>
+		
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+				precision highp float;
+			#endif
+			
+			varying vec4 vColor;
+			
+			void main(void)
+			{
+				gl_FragColor = vColor;
+			}
+		</script>
+		
+		<script>		
+			/* ===== CONSTANTS AND VARIABLES INITIALIZATION ===== */
+			var vertexBuffer = null;
+			var colorBuffer = null;
+			var indexBuffer = null;
+			
+			var vertices = [];
+			var colors = [];
+			var pointColors = [];
+			var indices = [];
+
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();
+			
+			const DEFAULT_POINT_COLOR = [1.0, 0.0, 0.0, 1.0];
+			const DEFAULT_TRIANGLE_COLOR = [0.5, 0.5, 0.5, 1.0];
+			
+			/* ====== SHADER AND LINKAGE INITIALIZATION ===== */
+			function initShaderParameters(prg)
+			{
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				prg.colorAttribute 			= glContext.getAttribLocation(prg, "aColor");
+				glContext.enableVertexAttribArray(prg.colorAttribute);
+				prg.pMatrixUniform          = glContext.getUniformLocation(prg, 'uPMatrix');
+				prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
+			}
+			
+			/* ===== SET UP THE INITIAL SCENE, THUS THE ASSOCIATED BUFFERS ===== */
+			function initBuffers()
+			{
+				vertexBuffer = getVertexBufferWithVertices(vertices);
+				colorBuffer = getVertexBufferWithVertices(colors);
+				indexBuffer  = getIndexBufferWithIndices(indices);
+			}
+			
+			function updateBuffers()
+			{
+				initBuffers();
+			}
+			
+			/* ===== PUSH THE PROJECTION AND MODEL-VIEW MATRIX TO THE SHADERS ===== */
+			function setMatrixUniforms()
+			{
+				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
+			}
+			
+			/* ===== DRAWING FUNCTION OF THE RENDER LOOP ===== */
+			function drawScene()
+			{
+			
+				glContext.clearColor(0.9, 0.9, 0.9, 1.0);		//Color with which the previous image is cleared to avoid residual artifacts
+				glContext.enable(glContext.DEPTH_TEST);			//Prevents further fragments to be drawn over nearest fragments
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);	//No idea
+				glContext.viewport(0, 0, c_width, c_height);	//Sets which part of the canvas is going to be drawn upon
+				
+				//Initial matrices setup
+				mat4.identity(pMatrix);
+				mat4.identity(mvMatrix);		
+				setMatrixUniforms();			
+				
+				/* ----- DRAWS THE TRIANGLES ----- */
+				
+				//Binds the geometry buffer
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				
+				//updates the colorBuffer
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
+				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+				
+				//Binds the element order array buffer
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+				
+				//Draws the triangles with the given color
+				glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT, 0);
+				
+				/* ----- DRAWS THE DOTS ----- */
+				
+				//NB. Same vertices as the triangles, of course. But drawn in another way
+				
+				//Updates the color buffer
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, getVertexBufferWithVertices(pointColors));
+				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+				
+				//Draws the dots with the given color
+				glContext.drawElements(glContext.POINTS, indices.length, glContext.UNSIGNED_SHORT, 0);
+				
+				updateBuffers();
+			}
+			
+			function initWebGL()
+			{
+				glContext = getGLContext('webgl-canvas');
+				initProgram();				
+				initBuffers();
+				renderLoop();
+			}
+			
+			/* ===== ADDITIONNAL FUNCTIONS - RELATIVE TO EXERCISE ===== */
+			
+			function addPointToScene(pointLocation)
+			{
+				vertices.push(pointLocation.x, pointLocation.y, 0.0);
+				indices.push(indices.length);	//First length before push is 0
+				
+				colors.push(DEFAULT_TRIANGLE_COLOR[0], DEFAULT_TRIANGLE_COLOR[1], DEFAULT_TRIANGLE_COLOR[2], DEFAULT_TRIANGLE_COLOR[3]);
+				pointColors.push(DEFAULT_POINT_COLOR[0], DEFAULT_POINT_COLOR[1], DEFAULT_POINT_COLOR[2], DEFAULT_POINT_COLOR[3]);
+				console.log(vertices);
+				console.log(indices);
+				
+				updateBuffers();
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<script>
+			displayTitle("Exercice 5.1 - Dynamic TRIANGLE_STRIP", 1,1,1,1,1,1,1);
+		</script>
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+	</body>
+	
+	<script type="text/javascript">
+		/*
+		 * Javascript code that needs the whole page
+		 * to be loaded in order to execute correctly.
+		 * Mainly contains event listeners code
+		 */
+		 
+		 /* ===== MOUSE LISTENER ===== */
+		 var jsContext = document.getElementById("webgl-canvas");
+		 jsContext.addEventListener("click", function(event)
+		 {
+			var mouseLocation = getMouseContextLocation(jsContext, event);
+			mouseLocation = contextToGLCoordinates(mouseLocation);
+			
+			addPointToScene(mouseLocation);
+		 });
+		 
+		 function getMouseContextLocation(context, event)
+		 {
+			var contextRect = jsContext.getBoundingClientRect();
+			
+			var x = event.clientX - contextRect.left;
+			var y = event.clientY - contextRect.top;
+			
+			console.log("getMouseContextLocation [" + x + ";" + y + "]");
+			
+			return {x:x,y:y};
+		 }
+		 
+		 function contextToGLCoordinates(location)
+		 {
+			var x = (location.x - jsContext.width / 2.0) / jsContext.width * 2.0;
+			var y = (jsContext.height / 2.0 - location.y) / jsContext.height * 2.0;
+			
+			console.log("contextToGLCoordinates [" + x + ";" + y + "]");
+			
+			return {x:x,y:y};
+		 }
+		 
+	</script>
+</html>
