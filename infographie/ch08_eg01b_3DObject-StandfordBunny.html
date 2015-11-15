@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script src="js/loadModel3D.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec3 aVertexNormal;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			uniform mat4 uNMatrix;
+			uniform vec3 uLightPosition;
+			varying vec3 vNormal;
+			varying vec3 vLightRay;
+			varying vec3 vEyeVec;
+			void main(void) {
+				vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);
+			    vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
+			    vec4 light = vec4(uLightPosition,1.0);
+			    vLightRay = vertex.xyz - light.xyz;
+			    vEyeVec = -vec3(vertex.xyz);
+			    gl_Position = uPMatrix * vertex;
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+			precision highp float;
+			#endif
+			uniform float uShininess;
+			uniform vec3 uLightAmbient;
+			uniform vec3 uMaterialDiffuse;
+			uniform vec3 uMaterialSpecular;
+			varying vec3 vNormal;
+			varying vec3 vLightRay;
+			varying vec3 vEyeVec;
+			void main(void)
+			{
+				vec3 L = normalize(vLightRay);
+				vec3 N = normalize(vNormal);
+				float lambertTerm = dot(N,-L);
+				vec3 finalColor = uLightAmbient;
+				if(lambertTerm > 0.0)
+				{
+					finalColor += uMaterialDiffuse * lambertTerm;
+					vec3 E = normalize(vEyeVec);
+					vec3 R = reflect(L, N);
+					float specular = pow( max(dot(R, E), 0.0), uShininess);
+					finalColor += uMaterialSpecular * specular;
+				}
+				gl_FragColor = vec4(finalColor, 1.0);
+			}
+		</script>
+		<script>
+			var spreadOffset = 0.0;
+			var rotY = 0;
+			var rotX = 0;
+			var vertexBuffer = null;
+			var indexBuffer = null;
+			var normalsBuffer = null;
+			var indices = [];
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();
+			var translationMat = mat4.create();
+			mat4.identity(mvMatrix);
+			mat4.identity(pMatrix);
+			function initShaderParameters(prg){
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+			    glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+			    prg.vertexNormalAttribute = glContext.getAttribLocation(prg, "aVertexNormal");
+			    glContext.enableVertexAttribArray(prg.vertexNormalAttribute);
+			    prg.pMatrixUniform             = glContext.getUniformLocation(prg, 'uPMatrix');
+			    prg.mvMatrixUniform            = glContext.getUniformLocation(prg, 'uMVMatrix');
+			    prg.nMatrixUniform             = glContext.getUniformLocation(prg, 'uNMatrix');
+			    prg.lightPositionUniform       = glContext.getUniformLocation(prg, 'uLightPosition');
+			    prg.shininessUniform           = glContext.getUniformLocation(prg, 'uShininess');
+			    prg.lightAmbientUniform        = glContext.getUniformLocation(prg, 'uLightAmbient');
+			    prg.materialDiffuseUniform     = glContext.getUniformLocation(prg, 'uMaterialDiffuse');
+			    prg.materialSpecularUniform    = glContext.getUniformLocation(prg, 'uMaterialSpecular');
+			}
+			function degToRad(degrees){
+				return( degrees * Math.PI / 180.0 );
+			}
+			function initLights(){
+			    glContext.uniform3f(prg.lightPositionUniform, 1, 1, 1);
+			    glContext.uniform3f(prg.lightAmbientUniform, 0.1, 0.1, 0.1);
+				glContext.uniform3f(prg.materialSpecularUniform, 0.5, 0.5, 0.5);
+				glContext.uniform3f(prg.materialDiffuseUniform, 0.6, 0.6, 0.6);
+			    glContext.uniform1f(prg.shininessUniform, 24.0);
+			}
+			quat4.rotateX = function (quat, angle, dest) {
+			  if (!dest) dest = quat;
+			  quat4.multiply(quat, [Math.sin(angle/2), 0, 0, Math.cos(angle/2)]);
+			}
+			function setGraphicContext(){
+				glContext.clearColor(0.9, 0.9, 1.0, 1.0);
+				glContext.enable(glContext.DEPTH_TEST);
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				glContext.viewport(0, 0, c_width, c_height);
+				mat4.perspective(pMatrix, degToRad(60), c_width / c_height, 0.1, 1000.0);
+			}
+			function setMV(tx, ty, tz){
+				translationMat = mat4.create();
+				mat4.identity(translationMat);
+				mat4.translate(translationMat, translationMat, [tx, ty, tz]);
+				rotateModelViewMatrixUsingQuaternion(true);
+			    glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+			    glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mat4.multiply(mat4.create(), translationMat, mvMatrix));
+			}
+			mat4.identity(mvMatrix);
+			function drawScene(){
+				setGraphicContext();
+				setMV(-spreadOffset,-0.4,-1.0);
+				var nMatrix = mat4.create();
+			    mat4.copy(nMatrix, mvMatrix);
+			    mat4.invert(nMatrix, nMatrix);
+			    mat4.transpose(nMatrix, nMatrix);
+			    glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, normalsBuffer);
+				glContext.vertexAttribPointer(prg.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+				glContext.drawElements(glContext.TRIANGLES, indices.length, glContext.UNSIGNED_SHORT,0);
+				setMV(spreadOffset,-0.4,-1.0);
+				glContext.drawElements(glContext.LINES, indices.length, glContext.UNSIGNED_SHORT,0);
+			}
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				initProgram();
+				loadModel("models/stanfordBunny.json");
+			}
+			function sliderSpreadOffsetChanged(){
+				spreadOffset = document.getElementById("spreadOffsetSlider").value/100.0;
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<script>displayTitle("Ch.08 E.g.1b : Autre modèle 3D très célèbre: le Stanford Bunny", 1,1,1,1,1,1,1);</script>
+		Ecart entre les deux modèles sur x : 0.0<input type="range" id="spreadOffsetSlider" value="0" min="0" max="50" onChange="sliderSpreadOffsetChanged();">0.5<br />
+		<canvas id="webgl-canvas" width="1000" height="500">
+			HTML5 is not supported
+		</canvas>
+	</body>
+	  <script src='./js/mouseMotionHandling.js'></script>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec2 aTextureCoord;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			varying vec2 vTextureCoord;
+			void main(void) {
+				vTextureCoord = aTextureCoord;
+				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+			precision highp float;
+			#endif
+			uniform sampler2D uColorTexture;
+			uniform float deltaTexX;
+			uniform float deltaTexY;
+			varying vec2 vTextureCoord;
+			void main(void) {
+				vec2 offset = vec2(deltaTexX, deltaTexY);
+				vec2 mapCoord = vec2(vTextureCoord.s, vTextureCoord.t);
+				mapCoord += offset;
+				if(mapCoord.x > 1.0) mapCoord.x -= 1.0;
+				if(mapCoord.y > 1.0) mapCoord.y -= 1.0;
+				vec4 texelColor = texture2D(uColorTexture, mapCoord);
+				gl_FragColor = texelColor.rgba;
+			}
+		</script>
+		<script>
+			var currentTexID = 1;
+			const maxSample = 1;
+			var normalBuffer = null;
+			var vertexBuffer = null;
+			var indexBuffer = null;
+			var textCoordsBuffer = null;
+			var texColorTab = new Array();
+			var indices = [];
+			var vertices = [];
+			var textCoords =[];
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();
+			var normalMatrix = mat4.create();
+			var rotObject = 0;
+			var objectInRotation = 0;
+			var textureInTranslation = 0;
+			var textureOffsetX = 0.0;
+			var textureOffsetY = 0.0;
+			const deltaTranslateX = 0.001;
+			const deltaTranslateY = 0.002;
+			window.onkeydown = checkKey;
+			function checkKey(ev){
+				switch(ev.keyCode){
+					case 65:{
+						vertices[3] -= 0.01;
+						vertexBuffer = getArrayBufferWithArray(vertices);
+						break;
+					}
+					case 68:{
+						vertices[3] += 0.01;
+						vertexBuffer = getArrayBufferWithArray(vertices);
+						break;
+					}
+					case 87:{
+						vertices[4] += 0.01;
+						vertexBuffer = getArrayBufferWithArray(vertices);
+						break;
+					}
+					case 83:{
+						vertices[4] -= 0.01;
+						vertexBuffer = getArrayBufferWithArray(vertices);
+						break;
+					}
+					default:
+					  console.log(ev.keyCode);
+					break;
+				}
+			}
+			function initShaderParameters(prg){
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				prg.textureCoordsAttribute  = glContext.getAttribLocation(prg, "aTextureCoord");
+				glContext.enableVertexAttribArray(prg.textureCoordsAttribute);
+				prg.pMatrixUniform          = glContext.getUniformLocation(prg, 'uPMatrix');
+				prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
+				prg.colorTextureUniform 	= glContext.getUniformLocation(prg, "uColorTexture");
+				prg.deltaTexX 				= glContext.getUniformLocation(prg, "deltaTexX");
+				prg.deltaTexY				= glContext.getUniformLocation(prg, "deltaTexY");
+			}
+			function initBuffers(){
+				vertices = [ -1.0, -1.0, 0.0,
+							  1.0, -1.0, 0.0,
+							 -1.0,  1.0, 0.0,
+							  1.0,  1.0, 0.0 ];
+				normals = [ 0.0, 0.0, 1.0,
+							0.0, 0.0, 1.0,
+							0.0, 0.0, 1.0,
+							0.0, 0.0, 1.0 ];
+				indices = [ 0, 1, 2, 3 ];
+				textCoords = [  0.0, 0.0,
+								1.0, 0.0,
+								0.0, 1.0,
+								1.0, 1.0 ];
+				normalBuffer     = getArrayBufferWithArray(normals);
+				vertexBuffer     = getArrayBufferWithArray(vertices);
+				indexBuffer      = getIndexBufferWithIndices(indices);
+				textCoordsBuffer = getArrayBufferWithArray(textCoords);
+			}
+			function drawScene(){
+				glContext.clearColor(0.0, 0.0, 0.0, 1.0);
+				glContext.enable(glContext.DEPTH_TEST);
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				glContext.viewport( 0.0, 0.0, c_width, c_height);
+				mat4.perspective(pMatrix, degToRad(60), c_width / c_height, 0.1, 1000.0);
+				mat4.identity(mvMatrix);
+				mat4.translate(mvMatrix, mvMatrix, [0.0, 0.0, -3.0]);
+				mat4.rotateY(mvMatrix, mvMatrix , rotObject);
+				if( objectInRotation === 1 )
+					rotObject += 0.02;
+				switch( textureInTranslation ) {
+					case 1:
+					console.log( "c1" );
+						if (textureOffsetX<1.0) textureOffsetX += deltaTranslateX;
+						else textureOffsetX = 0.0;
+					break;
+					case 2:
+					console.log( "c2" );
+						if (textureOffsetY<1.0) textureOffsetY += deltaTranslateY;
+						else textureOffsetY = 0.0;
+					break;
+					case 3:
+					console.log( "c3" );
+						if (textureOffsetX<1.0) textureOffsetX += deltaTranslateX;
+						else textureOffsetX = 0.0;
+						if (textureOffsetY<1.0) textureOffsetY += deltaTranslateY;
+						else textureOffsetY = 0.0;
+					break;
+				}
+				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, normalBuffer);
+				glContext.vertexAttribPointer(prg.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
+				glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
+				glContext.activeTexture(glContext.TEXTURE0);
+				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[currentTexID-1]);
+				glContext.uniform1i(prg.colorTextureUniform, 0);
+				glContext.uniform1f(prg.deltaTexX, textureOffsetX);
+				glContext.uniform1f(prg.deltaTexY, textureOffsetY);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+				glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+			}
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				initProgram();
+				initBuffers();
+				initTextureWithImage( "fig/Lenna.png", texColorTab );
+				renderLoop();
+			}
+		</script>
+		<script>
+			function WriteIDs(){
+				document.getElementById("spanIDs").innerHTML = "TextureID: " + currentTexID;
+			}
+			function animateObject(){
+				if( document.getElementById("animateCheckBox1").checked )
+					objectInRotation = 1;
+				else
+					objectInRotation = 0;
+			}
+			function animateTexture(){
+				if( document.getElementById("animateCheckBox2").checked )
+					textureInTranslation = 1;
+				else
+					textureInTranslation = 0;
+				if( document.getElementById("animateCheckBox3").checked )
+					textureInTranslation += 2;
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<script>displayTitle("Ch.08 E.g.4 : Notion de Texture", 1,1,1,1,1,1,1);</script>
+		<p>Cet exemple propose de plaquer une des cinq textures au choix sur un simple carré avec comme option des offsets sur x et y.</p>
+        <p>
+			<input id="animateCheckBox1" type="checkbox" onchange="animateObject()">Rotation du carré</input>
+			</p>
+			<p>
+			Translation :<br>
+			<input id="animateCheckBox2" type="checkbox" onchange="animateTexture()">Texture sur X</input>
+			<br>
+			<input id="animateCheckBox3" type="checkbox" onchange="animateTexture()">texture sur Y</input>
+			<br>
+			Pour mieux observer l'effet du plaquage de texture, un sommet peut être bougé avec les touches [A][D][W][S]
+			</p>
+			<span id="spanIDs"><script>WriteIDs();</script></span>
+		</p>
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+	</body>
+</html>

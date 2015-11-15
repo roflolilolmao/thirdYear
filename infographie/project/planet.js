@@ -42,7 +42,7 @@ Planet.prototype.draw = function(mainBodyPos)
 	glContext.uniform3f(prg.center, c[0], c[1], 0.0);
 	glContext.uniform3f(prg.colorPlanet, this.color[0], this.color[1], this.color[2]);
 	
-	glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+	glContext.drawElements(glContext.TRIANGLES, indicesArray[0].length, glContext.UNSIGNED_SHORT,0);
 
 	//console.log(this.color);
 }
@@ -66,7 +66,7 @@ Planet.prototype.drawOrbit = function(mainBody)
 		
 	}
 	
-	glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+	// glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
 }
 
 function System(orbitBody, bodies, mainBody)

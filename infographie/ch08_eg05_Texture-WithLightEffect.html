@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script src="js/loadModel3D.js"></script>
+		<script src="js/OBJ_loader.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec3 aVertexNormal;
+			attribute vec2 aTextureCoord;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			uniform mat4 uNMatrix;
+			uniform vec3 uLightPosition;
+			varying vec3 vNormal;
+			varying vec2 vTextureCoord;
+			varying vec3 vLightRay;
+			void main(void) {
+				vTextureCoord = aTextureCoord;
+				vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);
+				vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
+				if(uLightPosition == vec3(0.0,0.0,0.0))
+					vLightRay = vec3(0.0,0.0,0.0);
+				else{
+					vLightRay = vertex.xyz - uLightPosition;
+				}
+				gl_Position = uPMatrix * vertex;
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+			precision lowp float;
+			#endif
+			uniform sampler2D uColorTexture;
+			varying vec2 vTextureCoord;
+			varying vec3 vNormal;
+			varying vec3 vLightRay;
+			void main(void){
+				vec2 mapCoord = vec2(vTextureCoord.s, vTextureCoord.t);
+				vec4 texelColor = texture2D(uColorTexture, mapCoord);
+				vec3 finalColor;
+				finalColor = texelColor.rgb;
+				if(vLightRay != vec3(0.0,0.0,0.0)) {
+					vec3 L = normalize(vLightRay);
+					vec3 N = normalize(vNormal);
+					float lambertTerm = dot(N,-L);
+					finalColor = texelColor.rgb;
+					if( lambertTerm>0.0 )
+						finalColor *= lambertTerm;
+				}
+				gl_FragColor = vec4(finalColor, 1.0);
+			}
+		</script>
+		<script>
+			var sphereDivisions = 12;
+			var indexBuffersArray = [];
+			var vertexBuffersArray = [];
+			var normalBuffersArray = [];
+			var textureBuffersArray = [];
+			var texColorTab = new Array();
+			var indicesArray = new Array();
+			var	vertices = new Array();
+			var	normals = new Array();
+			var	textCoords = new Array();
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();
+			var nMatrix = mat4.create();
+			var currentRy = 0;
+			var tx = 0.0;
+			var ty = 0.2;
+			var tz = -4.0;
+			window.onkeydown = checkKey;
+			var movingStep = 0.1;
+			function checkKey(ev){
+				switch(ev.keyCode){
+					case 87: tz+=movingStep; break;
+					case 83: tz-=movingStep; break;
+					case 68: tx+=movingStep; break;
+					case 65: tx-=movingStep; break;
+					case 82: ty+=movingStep; break;
+					case 70: ty-=movingStep; break;
+					case 173:
+					case 109:{
+						if (sphereDivisions >1) --sphereDivisions;
+						console.log( sphereDivisions );
+						initSceneBuffers();
+						break;
+					}
+					case 49:
+					case 107:{
+						if (sphereDivisions <100) ++sphereDivisions;
+						console.log( sphereDivisions );
+						initSceneBuffers();
+						break;
+					}
+					default:
+					  console.log(ev.keyCode);
+					break;
+				}
+			}
+			function initShaderParameters(prg){
+				prg.vertexPositionAttribute 	= glContext.getAttribLocation(prg, "aVertexPosition");
+			    glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+			    prg.vertexNormalAttribute 		= glContext.getAttribLocation(prg, "aVertexNormal");
+			    glContext.enableVertexAttribArray(prg.vertexNormalAttribute);
+			    prg.textureCoordsAttribute 		= glContext.getAttribLocation(prg, "aTextureCoord");
+			    glContext.enableVertexAttribArray(prg.textureCoordsAttribute);
+				prg.colorTextureUniform 		= glContext.getUniformLocation(prg, "uColorTexture");
+			    prg.pMatrixUniform             	= glContext.getUniformLocation(prg, 'uPMatrix');
+			    prg.mvMatrixUniform            	= glContext.getUniformLocation(prg, 'uMVMatrix');
+			    prg.nMatrixUniform             	= glContext.getUniformLocation(prg, 'uNMatrix');
+			    prg.lightPositionUniform       	= glContext.getUniformLocation(prg, 'uLightPosition');
+			}
+			function initBuffers(){
+				vertices = [
+                            -1.0, -1.0, -1.0,
+                            -1.0,  1.0, -1.0,
+                            -1.0, -1.0,  1.0,
+                            -1.0, -1.0,  1.0,
+                            -1.0,  1.0, -1.0,
+                            -1.0,  1.0,  1.0,
+                            1.0, -1.0, -1.0,
+                            1.0,  1.0, -1.0,
+                            1.0, -1.0,  1.0,
+                            1.0, -1.0,  1.0,
+                            1.0,  1.0, -1.0,
+                            1.0,  1.0,  1.0,
+                            -1.0, -1.0, -1.0,
+                            1.0, -1.0, -1.0,
+                            -1.0, -1.0,  1.0,
+                            -1.0, -1.0,  1.0,
+                            1.0, -1.0, -1.0,
+                            1.0, -1.0,  1.0,
+                            -1.0,  1.0, -1.0,
+                            1.0,  1.0, -1.0,
+                            -1.0,  1.0,  1.0,
+                            -1.0,  1.0,  1.0,
+                            1.0,  1.0, -1.0,
+                            1.0,  1.0,  1.0,
+                            -1.0, -1.0, -1.0,
+                            1.0, -1.0, -1.0,
+                            -1.0,  1.0, -1.0,
+                            -1.0,  1.0, -1.0,
+                            1.0, -1.0, -1.0,
+                            1.0,  1.0, -1.0,
+                            -1.0, -1.0,  1.0,
+                            1.0, -1.0,  1.0,
+                            -1.0,  1.0,  1.0,
+                            -1.0,  1.0,  1.0,
+                            1.0, -1.0,  1.0,
+                            1.0,  1.0,  1.0 ];
+				textCoords = [   0, 0,
+                                 1, 0,
+                                 0, 1,
+                                 0, 1,
+                                 1, 0,
+                                 1, 1,
+                                0, 0,
+                                1, 0,
+                                0, 1,
+                                0, 1,
+                                1, 0,
+                                1, 1,
+                                 0, 0,
+                                1, 0,
+                                 0, 1,
+                                 0, 1,
+                                1, 0,
+                                1, 1,
+                                 0, 1,
+                                1, 1,
+                                 0, 0,
+                                 0, 0,
+                                1, 1,
+                                1, 0,
+                                 0, 1,
+                                1, 1,
+                                 0, 0,
+                                 0, 0,
+                                1, 1,
+                                1, 0,
+                                 0, 0,
+                                1, 0,
+                                 0, 1,
+                                 0, 1,
+                                1, 0,
+                                1, 1 ];
+				normals = [];
+				indicesArray = [];
+                var curIndex=0;
+			    for (var triangleNb=0; triangleNb < 12; triangleNb++){
+			        for (var localIndex=0; localIndex < 3; localIndex++){
+			            indicesArray.push(curIndex);
+			            curIndex++;
+			        }
+			    }
+				cubeSideNormals = [ -1, 0, 0,
+									 1, 0, 0,
+									 0, -1, 0,
+									 0, 1, 0,
+									 0, 0, -1,
+									 0, 0, 1];
+				for(var cubeSide=0; cubeSide < 6; cubeSide++){
+					for (var i = 0; i < 6; i++) {
+						normals.push(cubeSideNormals[cubeSide*3]);
+						normals.push(cubeSideNormals[cubeSide*3+1]);
+						normals.push(cubeSideNormals[cubeSide*3+2]);
+					};
+				}
+			    console.log("indices: "+indicesArray.length+" vertices: "+vertices.length +" normals: "+normals.length +" textures: "+textCoords.length);
+				vertexBuffersArray = getArrayBufferWithArray(vertices);
+				textureBuffersArray = getArrayBufferWithArray(textCoords);
+				indexBuffersArray = getIndexBufferWithIndices(indicesArray);
+				normalBuffersArray = getVertexBufferWithVertices(normals);
+			}
+			function initSceneBuffers(){
+				indicesArray = [];
+				vertices = [];
+				normals = [];
+				textCoords = [];
+				var latitudeBands = sphereDivisions;
+			    var longitudeBands = sphereDivisions;
+			    var radius = 0.8;
+			    for (var latNumber=0; latNumber <= latitudeBands; ++latNumber)
+			    {
+			        var theta = latNumber * Math.PI / latitudeBands;
+			        var sinTheta = Math.sin(theta);
+			        var cosTheta = Math.cos(theta);
+			        for (var longNumber=0; longNumber <= longitudeBands; ++longNumber)
+			        {
+			            var phi = longNumber * 2.0 * Math.PI / longitudeBands;
+			            var sinPhi = Math.sin(phi);
+			            var cosPhi = Math.cos(phi);
+			            var x = cosPhi * sinTheta;
+			            var y = cosTheta;
+			            var z = sinPhi * sinTheta;
+			            vertices.push(radius * x);
+			            vertices.push(radius * y);
+			            vertices.push(radius * z);
+			            normals.push(x, y, z);
+			            textCoords.push(1.0-longNumber/longitudeBands, 1.0-latNumber/latitudeBands);
+			        }
+			    }
+			    for (var latNumber=0; latNumber < latitudeBands; latNumber++)
+			    {
+			        for (var longNumber=0; longNumber < longitudeBands; longNumber++)
+			        {
+			            var first = (latNumber * (longitudeBands + 1)) + longNumber;
+			            var second = first + longitudeBands + 1;
+			            indicesArray.push(first);
+			            indicesArray.push(second);
+			            indicesArray.push(first + 1);
+			            indicesArray.push(second);
+			            indicesArray.push(second + 1);
+			            indicesArray.push(first + 1);
+			        }
+			    }
+			    console.log("indices: "+indicesArray.length+" vertices: "+vertices.length +" normals: "+normals.length +" textures: "+textCoords.length);
+				vertexBuffersArray = getVertexBufferWithVertices(vertices);
+				indexBuffersArray = getIndexBufferWithIndices(indicesArray);
+				normalBuffersArray = getVertexBufferWithVertices(normals);
+				textureBuffersArray = getVertexBufferWithVertices(textCoords);
+			}
+			function initLights(){
+			    glContext.uniform3f(prg.lightPositionUniform, 0, 0, 1);
+			}
+			function drawObject(modelViewMatrix){
+			    glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, modelViewMatrix);
+			    mat4.copy(nMatrix, modelViewMatrix);
+			    mat4.invert(nMatrix, nMatrix);
+			    mat4.transpose(nMatrix, nMatrix);
+			    glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, normalBuffersArray);
+				glContext.vertexAttribPointer(prg.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffersArray);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, textureBuffersArray);
+				glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffersArray);
+				glContext.activeTexture(glContext.TEXTURE0);
+				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[0]);
+				glContext.uniform1i(prg.colorTextureUniform, 0);
+				glContext.drawElements(glContext.TRIANGLES, indicesArray.length, glContext.UNSIGNED_SHORT,0);
+			}
+			function drawScene(){
+				glContext.clearColor(0.9, 0.9, 1.0, 1.0);
+				glContext.enable(glContext.DEPTH_TEST);
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				glContext.viewport(0, 0, c_width, c_height);
+			    mat4.perspective(pMatrix, degToRad(60), c_width / c_height, 0.1, 1000.0);
+			    glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				if(indicesArray.length > 0){
+					translationMat = mat4.create();
+					mat4.identity(translationMat);
+					mat4.translate(translationMat, translationMat, [tx, ty, tz]);
+					rotateModelViewMatrixUsingQuaternion(true);
+					var modelViewMatrix = mat4.multiply(mat4.create(), translationMat, mvMatrix);
+					drawObject(modelViewMatrix);
+				}
+				else
+					console.log("Rien à rendre?")
+			}
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				initProgram();
+				initBuffers();
+				initTextureWithImage( "fig/Lenna.png", texColorTab );
+				initLights();
+				mat4.identity(mvMatrix);
+				renderLoop();
+			}
+			function setResetLightVector(checkboxID){
+				console.log("boxID"+checkboxID);
+				if( document.getElementById( checkboxID ).checked )	{
+					glContext.uniform3f(prg.lightPositionUniform, 0.0, 0.0, 1.0);
+					console.log("checked");
+				}
+				else{
+					glContext.uniform3f(prg.lightPositionUniform, 0.0, 0.0, 0.0);
+					console.log("NOT checked");					
+				}
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<script>displayTitle("Ch.08 E.g.5 : Texture sur cube avec ou sans éclairage", 1,1,1,1,1,1,1);</script>
+		<br>
+		<p>Rotation avec la souris, translation: X: [a,d]: Y: [r,f] Z: [w,s]</p>
+		<br />
+		<input id="useLightCheckBox" type="checkbox" checked=false onchange="setResetLightVector('useLightCheckBox')">Lumière</input>
+		<br />
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+		<br>
+	</body>
+	<script src='./js/mouseMotionHandling.js'></script>
+</html>

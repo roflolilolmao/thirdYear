@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="./css/stylesheet.css">
+    <script src="./js/commonFunctions.js"></script>
+    <script src="./js/gl-matrix-min.js"></script>
+    <script src="./js/webglTools.js"></script>
+    <script id="shader-vs" type="x-shader/x-vertex">attribute vec3 aVertexNormal;attribute vec3 aVertexPosition;attribute vec2 aTextureCoord;uniform mat4 uNMatrix;uniform mat4 uMVMatrix;uniform mat4 uPMatrix;uniform vec3 uLightPosition;varying vec2 vTextureCoord;varying vec3 vNormal;varying vec3 vLightRay;varying vec3 vEyeVec;void main(void){vTextureCoord=aTextureCoord;vec4 vertex=uMVMatrix * vec4(aVertexPosition, 1.0);vNormal=vec3(uNMatrix * vec4(aVertexNormal, 1.0));vec4 light=vec4(uLightPosition,1.0);vLightRay=vertex.xyz - light.xyz;vEyeVec=-vec3(vertex.xyz);gl_Position=uPMatrix * vertex;}</script>
+    <script id="shader-fs" type="x-shader/x-fragment">
+        #ifdef GL_ES 
+		precision highp float;
+		#endif 
+		uniform float uShininess;uniform vec3 uLightAmbient;uniform vec3 uMaterialDiffuse;uniform vec3 uMaterialSpecular;uniform sampler2D uColorTexture;varying vec2 vTextureCoord;varying vec3 vNormal;varying vec3 vLightRay;varying vec3 vEyeVec;void main(void){vec3 L=normalize(vLightRay);vec3 N=normalize(vNormal);float lambertTerm=dot(N,-L);vec2 mapCoord=vec2(vTextureCoord.s, vTextureCoord.t);vec4 texelColor=texture2D(uColorTexture, mapCoord);float alpha=1.0;if(texelColor[0]==(254.0/255.0) && texelColor[1]==(121.0/255.0) && texelColor[2]==(243.0/255.0)){alpha=0.0;discard;}vec3 finalColor=uLightAmbient;if(lambertTerm > 0.0){finalColor +=uMaterialDiffuse * lambertTerm*0.1;vec3 E=normalize(vEyeVec);vec3 R=reflect(L, N);float specular=0.0;finalColor +=uMaterialSpecular * specular*0.5;}finalColor=texelColor.xyz * finalColor;gl_FragColor=vec4(finalColor, alpha);}</script>
+    <script>
+        var currentTexID = 1;
+        const maxSample = 5;
+        var normalBuffer = null;
+        var vertexBuffer = null;
+        var indexBuffer = null;
+        var textCoordsBuffer = null;
+        var texColorTab = new Array();
+        var indices = [];
+        var vertices = [];
+        var textCoords = [];
+        var mvMatrix = mat4.create();
+        var pMatrix = mat4.create();
+        var nMatrix = mat4.create();
+        var rotObject = 0;
+        var forest = new Array();
+        function initShaderParameters(prg) {
+            prg.vertexNormalAttribute = glContext.getAttribLocation(prg, "aVertexNormal");
+            glContext.enableVertexAttribArray(prg.vertexNormalAttribute);
+            prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+            glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+            prg.textureCoordsAttribute = glContext.getAttribLocation(prg, "aTextureCoord");
+            glContext.enableVertexAttribArray(prg.textureCoordsAttribute);
+            prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
+            prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
+            prg.nMatrixUniform = glContext.getUniformLocation(prg, "uNMatrix");
+            prg.lightPositionUniform = glContext.getUniformLocation(prg, 'uLightPosition');
+            prg.shininessUniform = glContext.getUniformLocation(prg, 'uShininess');
+            prg.lightAmbientUniform = glContext.getUniformLocation(prg, 'uLightAmbient');
+            prg.materialDiffuseUniform = glContext.getUniformLocation(prg, 'uMaterialDiffuse');
+            prg.materialSpecularUniform = glContext.getUniformLocation(prg, 'uMaterialSpecular');
+            prg.uColorTexture = glContext.getUniformLocation(prg, "uColorTexture");
+        }
+        function initBuffers() {
+            vertices = [-1.0, -1.0, 0.0, 1.0, -1.0, 0.0, -1.0, 1.0, 0.0, 1.0, 1.0, 0.0];
+            normals = [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0];
+            indices = [0, 1, 2];
+            textCoords = [0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 2.0, 2.0];
+            normalBuffer = getArrayBufferWithArray(normals);
+            vertexBuffer = getArrayBufferWithArray(vertices);
+            indexBuffer = getIndexBufferWithIndices(indices);
+            textCoordsBuffer = getArrayBufferWithArray(textCoords);
+        }
+        function verticesRotY(vertices, alpha) {
+            var rotVertices = [vertices.length];
+            for (var i = 0; i < vertices.length; i += 3) {
+                var xyz = [vertices[i], vertices[i + 1], vertices[i + 2]];
+                rotVertices[i] = xyz[0] * Math.cos(alpha) - xyz[2] * Math.sin(alpha);
+                rotVertices[i + 1] = xyz[1];
+                rotVertices[i + 2] = xyz[2] * Math.cos(alpha) - xyz[0] * Math.sin(alpha);
+            }
+            return rotVertices;
+        }
+        function verticesRotX(vertices, alpha) {
+            var rotVertices = [vertices.length];
+            for (var i = 0; i < vertices.length; i += 3) {
+                var xyz = [vertices[i], vertices[i + 1], vertices[i + 2]];
+                rotVertices[i] = xyz[0];
+                rotVertices[i + 1] = xyz[1] * Math.cos(alpha);
+                rotVertices[i + 2] = xyz[2] * Math.cos(alpha) - xyz[1] * Math.sin(alpha);
+            }
+            return rotVertices;
+        }
+        function verticesTranslation(vertices, x, y, z) {
+            var rotVertices = [vertices.length];
+            for (var i = 0; i < vertices.length; i += 3) {
+                var xyz = [vertices[i], vertices[i + 1], vertices[i + 2]];
+                rotVertices[i] = xyz[0] + x;
+                rotVertices[i + 1] = xyz[1] + y;
+                rotVertices[i + 2] = xyz[2] + z;
+            }
+            return rotVertices;
+        }
+        function initLights() {
+            glContext.uniform3f(prg.lightPositionUniform, 1, 1, 1);
+            glContext.uniform3f(prg.lightAmbientUniform, 0.5, 0.5, 0.5);
+            glContext.uniform3f(prg.materialDiffuseUniform, 0.6, 0.6, 0.6);
+            glContext.uniform3f(prg.materialSpecularUniform, 0.3, 0.3, 0.3);
+            glContext.uniform1f(prg.shininessUniform, 1.0);
+        }
+        var leftMouseDown = false;
+        var rightMouseDown = false;
+        var lastMouseX = null;
+        var lastMouseY = null;
+        var moveXInWorld = 0;
+        var moveYInWorld = 0;
+        var lastRightMouseX = 0;
+        var lastRightMouseY = 0;
+        var distance = 0;
+		var nbSteps = 4;
+        var rotationMatrix = mat4.create();
+        mat4.identity(rotationMatrix);
+        function handleMouseDown(event) {
+            if (event.which == 3 || event.button == 2) {
+                lastRightMouseX = event.clientX;
+                lastRightMouseY = event.clientY;
+                rightMouseDown = true;
+            } else {
+                if (event.which == 1 || event.button == 0) {
+                    lastMouseX = event.clientX;
+                    lastMouseY = event.clientY
+                    leftMouseDown = true;
+                }
+            }
+        }
+        function handleMouseUp(event) {
+            if (event.which == 3 || event.button == 2) {
+                rightMouseDown = false;
+            } else {
+                if (event.which == 1 || event.button == 0) {
+                    leftMouseDown = false;
+                }
+            }
+        }
+        function handleMouseMove(event) {
+            var newX = event.clientX;
+            var newY = event.clientY;
+            if (rightMouseDown) {
+                var deltaX = newX - lastRightMouseX;
+                var deltaY = newY - lastRightMouseY;
+                moveXInWorld += deltaX / 100;
+                moveYInWorld -= deltaY / 100;
+                lastRightMouseX = newX;
+                lastRightMouseY = newY;
+            }
+            if (leftMouseDown) {
+                var newRotationMatrix = mat4.create();
+                mat4.identity(newRotationMatrix);
+                var deltaX = newX - lastMouseX;
+                mat4.rotate(newRotationMatrix, newRotationMatrix, degToRad(deltaX / 5), [0, 1, 0]);
+                var deltaY = newY - lastMouseY;
+                mat4.rotate(newRotationMatrix, newRotationMatrix, degToRad(deltaY / 5), [1, 0, 0]);
+                mat4.multiply(rotationMatrix, newRotationMatrix, rotationMatrix);
+                lastMouseX = newX
+                lastMouseY = newY;
+            }
+        }
+        function drawScene() {
+            glContext.enable(glContext.BLEND);
+            glContext.blendFunc(glContext.SRC_ALPHA, glContext.ONE_MINUS_SRC_ALPHA);
+            glContext.clearColor(1.0, 1.0, 1.0, 1.0);
+            glContext.enable(glContext.DEPTH_TEST);
+            glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+            glContext.viewport(0.0, 0.0, c_width, c_height);
+            mat4.perspective(pMatrix, degToRad(60), c_width / c_height, 0.1, 1000.0);
+            mat4.identity(mvMatrix);
+            mat4.rotate(mvMatrix, mvMatrix, rotObject, [0, 1, 0]);
+            mat4.translate(mvMatrix, mvMatrix, [moveXInWorld, moveYInWorld, -4.0 + distance]);
+            mat4.multiply(mvMatrix, mvMatrix, rotationMatrix);
+            glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+            glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
+            mat4.copy(nMatrix, mvMatrix);
+            mat4.invert(nMatrix, nMatrix);
+            mat4.transpose(nMatrix, nMatrix);
+            glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);
+            initLights();
+            for (var i = 0; i < forest.length; i++) {
+				drawATree(forest[i]);
+            }
+        }
+		function drawATree(tree){
+			currentTexID = 0;
+			for(var i = -nbSteps / 2; i < nbSteps / 2; i++){
+				drawElement(tree.vertexBuffer[i], tree.normalBuffer[i]);				
+				currentTexID++;
+			}
+            drawElement(tree.vertexBufferRoots, tree.normalBufferRoots);
+            currentTexID = 1;
+		}
+		function calcTree(tree){
+            vertices = [-tree[3] / 2, -tree[4] / 2, 0.0, 3.0 * (tree[3] / 2), -tree[4] / 2, 0.0, -tree[3] / 2, 3.0 * (tree[4] / 2), 0.0];
+            normals = [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0];
+            var rotVertices = vertices;
+            var rotNormals = normals;
+            tree.rotVertices = [];
+			tree.rotNormals = [];
+			tree.vertexBuffer = [];
+			tree.normalBuffer = [];
+            for (var i = -nbSteps / 2; i < nbSteps / 2; i++) {
+                tree.rotVertices[i] = verticesRotY(vertices, degToRad(i * 180 / nbSteps));
+                tree.rotNormals[i] = verticesRotY(normals, degToRad(i * 180 / nbSteps));
+                tree.rotVertices[i] = verticesTranslation(tree.rotVertices[i], tree[0], tree[1] + tree[4] / 2, tree[2]);       
+				tree.vertexBuffer[i] = getArrayBufferWithArray(tree.rotVertices[i]);
+				tree.normalBuffer[i] = getArrayBufferWithArray(tree.rotNormals[i]);
+            }
+            vertices = [-tree[3] / 2, -tree[3] / 2, 0.0, 3.0 * (tree[3] / 2), -tree[3] / 2, 0.0, -tree[3] / 2, 3.0 * (tree[3] / 2), 0.0];
+            tree.rotVerticesRoot = verticesRotX(vertices, degToRad(90));
+            tree.rotVerticesRoot = verticesTranslation(tree.rotVerticesRoot, tree[0], tree[1], tree[2]);
+            tree.rotNormalsRoot = verticesRotX(normals, degToRad(90));
+			tree.normalBufferRoots = getArrayBufferWithArray(tree.rotNormalsRoot);
+			tree.vertexBufferRoots = getArrayBufferWithArray(tree.rotVerticesRoot);
+		}
+        function degToRad(degrees) {
+            return (degrees * Math.PI / 180.0);
+        }
+        function getRand(a, b) {
+            return Math.floor((Math.random() * (b - a)) + a);
+        }
+		function drawElement(vertexBuffer, normalBuffer, textureId) {
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, normalBuffer);
+            glContext.vertexAttribPointer(prg.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+            glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+            glContext.uniform1i(prg.uColorTexture, currentTexID);
+            glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+            glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT, 0);
+        }
+        function initWebGL() {
+            glContext = getGLContext('webgl-canvas');
+            initProgram();
+            initBuffers();
+            initLights();
+            for (var index = 0; index < maxSample; ++index) {
+                initTextureWithImage("fig/tree/" + index + ".png", texColorTab);
+            }
+            generateForest();
+            renderLoop();
+            distance = -10;
+            glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[0]);
+            glContext.activeTexture(glContext.TEXTURE1);
+            glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[1]);
+            glContext.activeTexture(glContext.TEXTURE2);
+            glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[2]);
+            glContext.activeTexture(glContext.TEXTURE3);
+            glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[3]);
+            glContext.activeTexture(glContext.TEXTURE4);
+            glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[4]);
+            glContext.activeTexture(glContext.TEXTURE5);
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
+            glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
+        }
+        function generateForest() {
+            for (var i = 0; i < 50; i++) {
+                makeRandomTree();
+            }
+        }
+        function makeRandomTree() {
+            var x = getRand(-20, 20);
+            var y = 0;
+            var z = getRand(-5, 5);
+            var w = getRand(1, 3);
+            var h = getRand(1, 6);
+            var i = forest.length;
+            forest[i] = new Array();
+            forest[i][0] = x;
+            forest[i][1] = y;
+            forest[i][2] = z;
+            forest[i][3] = w;
+            forest[i][4] = h;
+			calcTree(forest[i]);
+            updateTreeCounterDisplay();
+        }
+        function updateTreeCounterDisplay() {
+            document.getElementById("treeCount").innerHTML = "Nb trees : " + forest.length;
+        }
+        function WriteIDs() {
+            document.getElementById("spanIDs").innerHTML = "TextureID: " + currentTexID;
+        }
+        function changeTexture() {
+            if (currentTexID < maxSample) ++currentTexID;
+            else currentTexID = 1;
+            WriteIDs();
+        }
+    </script>
+</head>
+<body onload="initWebGL()">
+    <script>
+        displayTitle("Ch.08 Ex.09 : Une forêt", 1, 1, 1, 1, 1, 1, 1);
+    </script>
+    <p>Display a forest with random number of threes of random dimensions</p>
+    <p>Possible interactions:</p>
+    <ul>
+        <li>Rotation : Mouse movement (left button down)</li>
+        <li>Moving camera : Mouse movement (right button down)</li>
+        <li>Zoom : Mouse wheel</li>
+        <li>Ajouter un arbre : +</li>
+        <li>Soustraire un arbre : -</li>
+    </ul>
+    <p id="treeCount"> </p>
+    <canvas id="webgl-canvas" width="1500" height="500" oncontextmenu="return false;">HTML5 is not supported</canvas>
+</body>
+<script id="code-js" type="text/javascript">
+    document.getElementById("webgl-canvas").onmousedown = handleMouseDown;
+    document.onmouseup = handleMouseUp;
+    document.onmousemove = handleMouseMove;
+    var canvas = document.getElementById("webgl-canvas");
+    if (canvas.addEventListener) {
+        canvas.addEventListener("mousewheel", MouseScroll, false);
+        canvas.addEventListener("DOMMouseScroll", MouseScroll, false);
+    } else {
+        if (canvas.attachEvent) {
+            canvas.attachEvent("onmousewheel", MouseScroll);
+        }
+    }
+    function MouseScroll(event) {
+        var rolled = 0;
+        if ('wheelDelta' in event) {
+            rolled = event.wheelDelta;
+        } else {
+            rolled = event.detail;
+        }
+        distance += -rolled / 10;
+    }
+    window.onkeydown = checkKey;
+    var delta = 5;
+    function checkKey(ev) {
+        switch (ev.keyCode) {
+            case 49:
+            case 107:
+                makeRandomTree();
+                break;
+            case 173:
+            case 109:
+            case 189:
+                if (forest.length > 0) {
+                    delete forest[forest.length - 1];
+                    forest.splice(forest.length - 1, forest.length);
+                    updateTreeCounterDisplay();
+                }
+                break;
+            default:
+                console.log(ev.keyCode);
+                break;
+        }
+    }
+</script>
+</html>

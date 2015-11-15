@@ -1,0 +1,169 @@
+﻿<!DOCTYPE html>
+<html>
+	<head>
+		<title>Visualisation d'un tableau 2D</title>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="./js/commonFunctions.js"></script>
+		<script src="./js/gl-matrix-min.js"></script>	
+		<script src="./js/webglTools.js"></script>	
+		<script src="./js/normals.js"></script>		
+		<script src="./js/rendering.js"></script>		
+		<script src="./js/dataloading.js"></script>		
+		<script src="./js/manipulation.js"></script>	
+		<script src="./js/scene.js"></script>			
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec4 aColor;
+		    uniform mat4 uMVMatrix;
+		    uniform mat4 uPMatrix;
+			varying vec4 vColor;
+			varying float vValue;			
+			attribute vec3 aVertexNormal;	
+			attribute float scalingCoef;
+			uniform mat4 uNMatrix; 
+			uniform vec3 uLightPosition;	
+			varying vec3 vNormal;
+			varying vec3 vLightRay;
+			varying vec3 vEyeVec;
+		    void main(void) {
+				vColor = aColor;
+				vValue = aVertexPosition[1];
+				vec4 newVec = vec4(aVertexPosition, 1.0);
+				newVec.y *= 1.0; 
+				gl_Position = uPMatrix * uMVMatrix * newVec;
+				gl_PointSize = 4.0;
+				vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
+				vec4 vertex = uMVMatrix * newVec;
+				vec4 light = vec4(uLightPosition,1.0);
+				vLightRay = vertex.xyz - light.xyz;
+				vEyeVec = vec3(vertex.xyz);
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+				precision highp float;
+			#endif
+			const int COLORS_NUMBER = 8;
+			const float MARGIN_THRESHOLD = 0.02;
+			uniform bool uUseValueToColorize;	
+			uniform bool uUseShading;					
+			uniform vec4 uVecThreshold[COLORS_NUMBER];	
+			varying vec4 vColor;			
+			varying float vValue;			
+			uniform float uShininess;       
+			uniform vec3 uLightAmbient;     
+			uniform vec3 uMaterialDiffuse;  
+			uniform vec3 uMaterialSpecular; 
+			varying vec3 vNormal;
+			varying vec3 vLightRay;
+			varying vec3 vEyeVec;
+			void main(void) {
+				vec4 ambientColor = vColor;
+				if (uUseValueToColorize) {
+					for (int i = 0; i < COLORS_NUMBER; i++) {
+						if (vValue <= uVecThreshold[i][0] + MARGIN_THRESHOLD || i + 1 >= COLORS_NUMBER) {
+							ambientColor = vec4(uVecThreshold[i][1], uVecThreshold[i][2], uVecThreshold[i][3], 1.0);
+							break;
+						}
+					}										
+				}
+				if (uUseShading) {
+					vec3 finalColor = ambientColor.xyz;
+					vec3 L = normalize(vLightRay);
+					vec3 N = normalize(vNormal);
+					float lambertTerm = dot(N,-L);
+					if (lambertTerm > 0.0)
+					{
+						finalColor += uMaterialDiffuse * lambertTerm;	
+						vec3 E = normalize(vEyeVec);
+						vec3 R = reflect(L, N);
+						float specular = pow( max(dot(R, E), 0.0), uShininess);
+						finalColor += uMaterialSpecular * specular;
+					}
+					gl_FragColor = vec4(finalColor, 1.0);
+				} else {
+					gl_FragColor = ambientColor;
+				}
+			}
+		</script>
+		<script>
+			var scene = new Scene('webgl-canvas');
+			initShaderParameters = scene.initShaderParameters.bind(scene);
+			drawScene = scene.draw.bind(scene);
+		</script>
+	</head>
+	<body>	
+		<script>displayTitle("Ch.08 Ex.12 : Visualisation d'un tableau 2D", 1,1,1,1,1,1,1);</script>
+		Note importante : programme initialement développé par M. Mathieu Rosser durant le cours "Infographie avec WebGL", HES-SO
+		<section>
+			<h2><span>Charger des données</span></h2>
+			<div class="details">
+				<div>
+					<p><label for="data-text">Données brutes</label></p>
+					<p><textarea id="data-text" name="data-text" cols="60" rows="8"></textarea></p>
+					<p><button type="button" id="data-text-btn" name="data-text-btn">Charger</button></p>
+				</div>
+				<div>
+					<p><label for="data-file">Données depuis un fichier texte</label></p>
+					<p><input type="file" name="data-file" id="data-file" /></p>
+					<p><label for="data-image-file">Données depuis une image</label></p>
+					<p><input type="file" name="data-image-file" id="data-image-file" /></p>
+					<p><label for="data-function">Données avec fonction mathématique</label></p>
+					<p>
+						<label for="data-function" class="no-size">F(x, y) = </label>
+						<input type="text" name="data-function" id="data-function" size="20" />
+						<button type="button" id="data-function-btn" name="data-function-btn">Charger</button>
+					</p>
+				</div>
+				<div>
+					<canvas id="image-canvas" width="100" height="100">
+						HTML5 n'est pas supporté
+					</canvas>
+				</div>
+			</div>
+		</section>
+		<section>
+			<h2><span>Visualiser des données</span></h2>
+			<div class="details">
+				<div class="renders">
+					<h3>Rendus</h3>
+					<p><button type="button" id="btn-render-pipes" name="btn-render-pipes">Histogramme</button></p>
+					<p><button type="button" id="btn-render-wireframe" name="btn-render-wireframe">Fil de fer</button></p>
+					<p><button type="button" id="btn-render-triangles" name="btn-render-triangles">Triangles</button></p>
+					<p><button type="button" id="btn-render-shading" name="btn-render-shading">Dégradés</button></p>
+					<p><button type="button" id="btn-render-levels" name="btn-render-levels">Niveaux</button></p>
+					<p><button type="button" id="btn-render-levels-shading" name="btn-render-levels-shading">Niveaux dégradés</button></p>
+					<h3 class="space">Caméra</h3>
+					<p><button type="button" id="btn-camera-reset" name="btn-camera-reset">Réinitialiser caméra</button></p>
+					<p><button type="button" id="btn-camera-sky" name="btn-camera-sky">Vue de dessus</button></p>
+					<p>
+						<select name="select-camera" id="select-camera">
+							<option value="0">- Atteindre un coin -</option>
+							<option value="1">Coin XY</option>
+							<option value="2">Coin X</option>
+							<option value="3">Coin Y</option>
+							<option value="4">Origine</option>
+						</select>
+					</p>
+				</div>
+				<div>
+					<canvas id="webgl-canvas" width="700" height="500" tabindex="1">
+						HTML5 n'est pas supporté
+					</canvas>
+				</div>
+				<div>
+					<h3>Interactions souris</h3>
+					<p><label>Clic gauche</label> Tourner la caméra</p>
+					<p><label>Clic droit</label> Monter/descendre</p>
+					<p><label>Molette</label> Avancer/reculer</p>
+					<h3 class="space">Interactions clavier</h3>
+					<p><label>W/S</label> Avancer/reculer</p>
+					<p><label>A/D</label> Gauche/droite</p>
+					<p><label>Q/E</label> Monter/descendre</p>
+					<p class="space">Cliquer sur le canevas pour<br />interagir avec la caméra</p>
+				</div>
+			</div>
+		</section>
+	</body>	
+</html>

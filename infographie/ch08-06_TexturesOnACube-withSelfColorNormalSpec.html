@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="./css/stylesheet.css">
+    <script src="./js/commonFunctions.js"></script>
+    <script src="./js/gl-matrix-min.js"></script>
+    <script src="./js/webglTools.js"></script>
+    <script id="shader-vs" type="x-shader/x-vertex"> attribute vec3 aVertexNormal;attribute vec3 aVertexPosition;attribute vec2 aTextureCoord;uniform mat4 uNMatrix;uniform mat4 uMVMatrix;uniform mat4 uPMatrix;uniform vec3 uLightPosition;varying vec2 vTextureCoord;varying vec3 vNormal;varying vec3 vLightRay;varying vec3 vEyeVec;void main(void){vTextureCoord=aTextureCoord;vec4 vertex=uMVMatrix * vec4(aVertexPosition, 1.0);vNormal=vec3(uNMatrix * vec4(aVertexNormal, 1.0));vec4 light=vec4(uLightPosition,1.0);vLightRay=vertex.xyz - light.xyz;vEyeVec=-vec3(vertex.xyz);gl_Position=uPMatrix * vertex;}</script>
+    <script id="shader-fs" type="x-shader/x-fragment">
+        #ifdef GL_ES
+		precision highp float;
+		#endif
+		uniform float uShininess;uniform vec3 uLightAmbient;uniform vec3 uMaterialDiffuse;uniform vec3 uMaterialSpecular;uniform bool usingColorMap;uniform bool usingNormalMap;uniform bool usingSpecularMap;uniform sampler2D uColorTexture;uniform sampler2D uNormalMap;uniform sampler2D uSpecularMap; uniform sampler2D uColorTexture2;uniform sampler2D uNormalMap2;uniform sampler2D uSpecularMap2;uniform float deltaTexX;uniform float deltaTexY;varying vec2 vTextureCoord;varying vec3 vNormal;varying vec3 vLightRay;varying vec3 vEyeVec;void main(void){vec3 L=normalize(vLightRay);vec3 N=normalize(vNormal); vec3 N2=normalize(vNormal);vec2 mapCoord=vec2(vTextureCoord); vec2 mapCoord2=vec2(vTextureCoord); vec2 offset=vec2(deltaTexX, deltaTexY);; mapCoord +=offset; mapCoord2 -=offset; if(mapCoord.x > 1.0){mapCoord.x -=1.0;}if(mapCoord.y > 1.0){mapCoord.y -=1.0;}if(mapCoord2.x
+        < 0.0){mapCoord2.x +=1.0;}if(mapCoord2.y < 0.0){mapCoord2.y +=1.0;}vec3 baseColor;vec3 normalVector;vec3 specVector; vec3 baseColor2;vec3 normalVector2;vec3 specVector2; vec3 baseColorPass;vec3 finalColor=uLightAmbient;if( usingColorMap ){baseColor=vec3(texture2D(uColorTexture, mapCoord)); baseColorPass=vec3(texture2D(uColorTexture2, mapCoord2));baseColor2=vec3(1.0-baseColorPass.x, baseColorPass.y, baseColorPass.z);}else{baseColor=vec3(1.0, 0.0, 0.0); baseColor2=vec3(0.0, 0.0, 1.0);}if( usingNormalMap ){normalVector=normalize(vec3(texture2D(uNormalMap, mapCoord))); normalVector2=normalize(vec3(texture2D(uNormalMap2, mapCoord2)));}else{normalVector=vec3( 0.0, 0.0, 1.0 ); normalVector2=vec3( 0.0, 0.0, 1.0 );}if( usingSpecularMap ){specVector=vec3(texture2D(uSpecularMap, mapCoord)); specVector2=vec3(texture2D(uSpecularMap2, mapCoord2));}else{specVector=vec3( 0.0, 0.0, 0.0 ); specVector2=vec3( 0.0, 0.0, 0.0 );}if( usingNormalMap || usingSpecularMap ){N *=normalVector;N=normalize(N); N2 *=normalVector2; N2=normalize(N2);float lambertTerm=dot(N,-L); float lambertTerm2=dot(N2, -L);float specular=0.0;if(lambertTerm> 0.0){finalColor +=uMaterialDiffuse * lambertTerm * (1.0 - vTextureCoord.s);vec3 E=normalize(vEyeVec);vec3 R=reflect(L, N);specular=pow( max(dot(R, E), 0.0), uShininess);finalColor +=specVector * uMaterialSpecular * specular * (1.0 - vTextureCoord.s);}if(lambertTerm2 > 0.0){finalColor +=uMaterialDiffuse * lambertTerm2 * vTextureCoord.s;vec3 E=normalize(vEyeVec);vec3 R=reflect(L, N2);specular=pow( max(dot(R, E), 0.0), uShininess);finalColor +=specVector2 * uMaterialSpecular * specular * vTextureCoord.s;}}finalColor *=baseColor.rgb * (1.0 - vTextureCoord.s) + baseColor2.rgb * vTextureCoord.s;gl_FragColor=vec4(finalColor, 1.0);}</script>
+    <script>
+        var mouseX = 0;
+        var mouseY = 0;
+        var mousePressed = false;
+        var xRotation = 0.0;
+        var yRotation = 0.0;
+        var zRotation = 0.0;
+        var currentColorMapID = 1;
+        var currentNormalMapID = 1;
+        var currentSpecularMapID = 1;
+        const M_PI = 3.1415926535897932384626433832795;
+        const M_2PI = 2.0 * M_PI;
+        const maxSample = 5;
+        var normalBuffer = null;
+        var vertexBuffer = null;
+        var textCoordsBuffer = null;
+        var texColorTab = new Array();
+        var texNormalTab = new Array();
+        var texSpecTab = new Array();
+        var vertices = [];
+        var textCoords = [];
+        var tempMatrix = mat4.create();
+        var rotateMatrix = mat4.create();
+        var mvMatrix = mat4.create();
+        var pMatrix = mat4.create();
+        var nMatrix = mat4.create();
+        var rotLight = 0;
+        var objectInRotation = 1;
+        var textureInTranslation = 0;
+        var textureOffsetX = 0.0;
+        var textureOffsetY = 0.0;
+        const deltaTranslateX = 0.001;
+        const deltaTranslateY = 0.002;
+        mat4.identity(rotateMatrix);
+        function initShaderParameters(prg) {
+            prg.vertexNormalAttribute = glContext.getAttribLocation(prg, "aVertexNormal");
+            glContext.enableVertexAttribArray(prg.vertexNormalAttribute);
+            prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+            glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+            prg.textureCoordsAttribute = glContext.getAttribLocation(prg, "aTextureCoord");
+            glContext.enableVertexAttribArray(prg.textureCoordsAttribute);
+            prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
+            prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
+            prg.nMatrixUniform = glContext.getUniformLocation(prg, "uNMatrix");
+            prg.lightPositionUniform = glContext.getUniformLocation(prg, 'uLightPosition');
+            prg.shininessUniform = glContext.getUniformLocation(prg, 'uShininess');
+            prg.lightAmbientUniform = glContext.getUniformLocation(prg, 'uLightAmbient');
+            prg.materialDiffuseUniform = glContext.getUniformLocation(prg, 'uMaterialDiffuse');
+            prg.materialSpecularUniform = glContext.getUniformLocation(prg, 'uMaterialSpecular');
+            prg.usingColorMapUniform = glContext.getUniformLocation(prg, 'usingColorMap');
+            prg.usingNormalMapUniform = glContext.getUniformLocation(prg, 'usingNormalMap');
+            prg.usingSpecularMapUniform = glContext.getUniformLocation(prg, 'usingSpecularMap');
+            prg.uColorTexture = glContext.getUniformLocation(prg, "uColorTexture");
+            prg.uNormalMap = glContext.getUniformLocation(prg, "uNormalMap");
+            prg.uSpecularMap = glContext.getUniformLocation(prg, "uSpecularMap");
+            prg.uColorTexture2 = glContext.getUniformLocation(prg, "uColorTexture2");
+            prg.uNormalMap2 = glContext.getUniformLocation(prg, "uNormalMap2");
+            prg.uSpecularMap2 = glContext.getUniformLocation(prg, "uSpecularMap2");
+            prg.deltaTexX = glContext.getUniformLocation(prg, "deltaTexX");
+            prg.deltaTexY = glContext.getUniformLocation(prg, "deltaTexY");
+        }
+        function initBuffers() {
+            vertices = [-1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0];
+            textCoords = [0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1];
+            normalBuffer = getArrayBufferWithArray(vertices);
+            vertexBuffer = getArrayBufferWithArray(vertices);
+            textCoordsBuffer = getArrayBufferWithArray(textCoords);
+        }
+        function setLightPosition() {
+            if (objectInRotation === 1) {
+                rotLight += 0.03;
+                if (rotLight > M_2PI) rotLight = -M_2PI;
+            }
+            glContext.uniform3f(prg.lightPositionUniform, 2.0 * Math.cos(rotLight), 2.0 * Math.sin(rotLight), 1.0);
+        }
+        function initMaterialProperties() {
+            switch (currentColorMapID) {
+                case 1:
+                    {
+                        glContext.uniform3f(prg.lightAmbientUniform, 0.5, 0.5, 0.5);
+                    }
+                    break;
+                case 2:
+                    {
+                        glContext.uniform3f(prg.lightAmbientUniform, 0.9, 0.5, 0.5);
+                    }
+                    break;
+                case 3:
+                    {
+                        glContext.uniform3f(prg.lightAmbientUniform, 0.5, 0.5, 0.5);
+                    }
+                    break;
+                case 4:
+                    {
+                        glContext.uniform3f(prg.lightAmbientUniform, 0.5, 0.5, 0.5);
+                    }
+                    break;
+                case 5:
+                    {
+                        glContext.uniform3f(prg.lightAmbientUniform, 0.3, 0.3, 0.3);
+                    }
+                    break;
+            }
+            switch (currentNormalMapID) {
+                case 1:
+                    {
+                        glContext.uniform3f(prg.materialDiffuseUniform, 0.4, 0.4, 0.4);
+                    }
+                    break;
+                case 2:
+                    {
+                        glContext.uniform3f(prg.materialDiffuseUniform, 0.4, 0.4, 0.4);
+                    }
+                    break;
+                case 3:
+                    {
+                        glContext.uniform3f(prg.materialDiffuseUniform, 0.4, 0.4, 0.4);
+                    }
+                    break;
+                case 4:
+                    {
+                        glContext.uniform3f(prg.materialDiffuseUniform, 0.2, 0.2, 0.3);
+                    }
+                    break;
+                case 5:
+                    {
+                        glContext.uniform3f(prg.materialDiffuseUniform, 0.6, 0.7, 0.6);
+                    }
+                    break;
+            }
+            switch (currentSpecularMapID) {
+                case 1:
+                    {
+                        glContext.uniform3f(prg.materialSpecularUniform, 0.2, 0.2, 0.2);
+                        glContext.uniform1f(prg.shininessUniform, 1.0);
+                    }
+                    break;
+                case 2:
+                    {
+                        glContext.uniform3f(prg.materialSpecularUniform, 1.0, 1.0, 1.0);
+                        glContext.uniform1f(prg.shininessUniform, 4.0);
+                    }
+                    break;
+                case 3:
+                    {
+                        glContext.uniform3f(prg.materialSpecularUniform, 0.8, 0.8, 0.7);
+                        glContext.uniform1f(prg.shininessUniform, 8.0);
+                    }
+                    break;
+                case 4:
+                    {
+                        glContext.uniform3f(prg.materialSpecularUniform, 1.0, 1.0, 1.0);
+                        glContext.uniform1f(prg.shininessUniform, 14.0);
+                    }
+                    break;
+                case 5:
+                    {
+                        glContext.uniform3f(prg.materialSpecularUniform, 1.0, 0.3, 1.0);
+                        glContext.uniform1f(prg.shininessUniform, 2.0);
+                    }
+                    break;
+            }
+        }
+        function degToRad(degrees) {
+            return degrees * Math.PI / 180;
+        }
+        function rotateCamera(angle, vector) {
+            mat4.identity(tempMatrix);
+            mat4.rotate(tempMatrix, tempMatrix, degToRad(angle), vector);
+            mat4.multiply(rotateMatrix, tempMatrix , rotateMatrix);
+        }
+        function drawScene() {
+            glContext.clearColor(0.0, 0.0, 0.0, 1.0);
+            glContext.enable(glContext.DEPTH_TEST);
+            glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+            glContext.viewport(0.0, 0.0, c_width, c_height);
+            mat4.perspective(pMatrix, degToRad(60), c_width / c_height, 0.1, 1000.0);
+            mat4.identity(mvMatrix);
+            mat4.translate(pMatrix, pMatrix, [0.0, 0.0, -4.0]);
+            mat4.multiply(mvMatrix, rotateMatrix, mvMatrix);
+            setLightPosition();
+            switch (textureInTranslation) {
+                case 1:
+                    if (textureOffsetX < 1.0) textureOffsetX += deltaTranslateX;
+                    else textureOffsetX = 0.0;
+                    break;
+                case 2:
+                    if (textureOffsetY < 1.0) textureOffsetY += deltaTranslateY;
+                    else textureOffsetY = 0.0;
+                    break;
+                case 3:
+                    if (textureOffsetX < 1.0) textureOffsetX += deltaTranslateX;
+                    else textureOffsetX = 0.0;
+                    if (textureOffsetY < 1.0) textureOffsetY += deltaTranslateY;
+                    else textureOffsetY = 0.0;
+                    break;
+            }
+            glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+            glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
+            mat4.copy(nMatrix, mvMatrix);
+            mat4.invert(nMatrix, nMatrix);
+            mat4.transpose(nMatrix, nMatrix);
+            glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);
+            initMaterialProperties();
+            glContext.uniform1i(prg.usingColorMapUniform, document.getElementById("useColorMapCheckBox").checked);
+            glContext.uniform1i(prg.usingNormalMapUniform, document.getElementById("useNormalMapCheckBox").checked);
+            glContext.uniform1i(prg.usingSpecularMapUniform, document.getElementById("useSpecularMapCheckBox").checked);
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, normalBuffer);
+            glContext.vertexAttribPointer(prg.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+            glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
+            glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
+            glContext.activeTexture(glContext.TEXTURE0);
+            glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[0]);
+            glContext.uniform1i(prg.uColorTexture, 0);
+            glContext.activeTexture(glContext.TEXTURE1);
+            glContext.bindTexture(glContext.TEXTURE_2D, texNormalTab[0]);
+            glContext.uniform1i(prg.uNormalMap, 1);
+            glContext.activeTexture(glContext.TEXTURE2);
+            glContext.bindTexture(glContext.TEXTURE_2D, texSpecTab[0]);
+            glContext.uniform1i(prg.uSpecularMap, 2);
+            glContext.activeTexture(glContext.TEXTURE3);
+            glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[1]);
+            glContext.uniform1i(prg.uColorTexture2, 3);
+            glContext.activeTexture(glContext.TEXTURE4);
+            glContext.bindTexture(glContext.TEXTURE_2D, texNormalTab[1]);
+            glContext.uniform1i(prg.uNormalMap2, 4);
+            glContext.activeTexture(glContext.TEXTURE5);
+            glContext.bindTexture(glContext.TEXTURE_2D, texSpecTab[1]);
+            glContext.uniform1i(prg.uSpecularMap2, 5);
+            glContext.uniform1f(prg.deltaTexX, textureOffsetX);
+            glContext.uniform1f(prg.deltaTexY, textureOffsetY);
+            glContext.drawArrays(glContext.TRIANGLES, 0, 36);
+        }
+        function initWebGL() {
+            glContext = getGLContext('webgl-canvas');
+            initProgram();
+            initBuffers();
+            initMaterialProperties();
+            initTextureWithImage("fig/myTexture_colorMap.png", texColorTab);
+            initTextureWithImage("fig/myTexture_normalMap.png", texNormalTab);
+            initTextureWithImage("fig/myTexture_specularMap.png", texSpecTab);
+            initTextureWithImage("fig/myTexture_colorMap.png", texColorTab);
+            initTextureWithImage("fig/myTexture_normalMap.png", texNormalTab);
+            initTextureWithImage("fig/myTexture_specularMap.png", texSpecTab);
+            renderLoop();
+        }
+        function animateObject() {
+            if (document.getElementById("animateCheckBox").checked) objectInRotation = 1;
+            else objectInRotation = 0;
+        }
+        function animateTexture() {
+            if (document.getElementById("animateCheckBox2").checked) textureInTranslation = 1;
+            else textureInTranslation = 0;
+            if (document.getElementById("animateCheckBox3").checked) textureInTranslation += 2;
+        }
+        function changeTheMapUse(checkboxID, buttonID) {
+            console.log(checkboxID + " - " + buttonID);
+            if (document.getElementById(checkboxID).checked) document.getElementById(buttonID).disabled = false;
+            else document.getElementById(buttonID).disabled = true;
+        }
+    </script>
+</head>
+<body onload="initWebGL()">
+    <script>
+        displayTitle("Ch.08 Ex.6 : Produire son propre ensemble de cartes de texture", 1, 1, 1, 1, 1, 1, 1);
+    </script>
+    <p>
+        <input id="useColorMapCheckBox" type="checkbox" checked=true onchange="changeTheMapUse( 'useColorMapCheckBox', 'colorMapButton' )">ColorMap</input>
+        <input id="useNormalMapCheckBox" type="checkbox" checked=true onchange="changeTheMapUse( 'useNormalMapCheckBox', 'normalMapButton' )">NormalMap</input>
+        <input id="useSpecularMapCheckBox" type="checkbox" checked=true onchange="changeTheMapUse( 'useSpecularMapCheckBox', 'specularMapButton' )">SpecularMap</input>
+        <input id="animateCheckBox" type="checkbox" checked=true onchange="animateObject()">Rotation</input>
+        <input id="animateCheckBox2" type="checkbox" onchange="animateTexture()">Translation sur X</input>
+        <input id="animateCheckBox3" type="checkbox" onchange="animateTexture()">Translation sur Y</input>
+        <br/>
+    </p>
+    <canvas id="webgl-canvas" width="500" height="500">HTML5 is not supported</canvas>
+</body>
+<script id='code-js' type="text/javascript">
+    var canvas = document.getElementById('webgl-canvas');
+    function getMousePosition(canvas, evt) {
+        var rect = canvas.getBoundingClientRect();
+        return {
+            x: evt.clientX - rect.left,
+            y: evt.clientY - rect.top
+        };
+    }
+    canvas.addEventListener('mousedown', function(evt) {
+        if (evt.button == 0) {
+            mousePressed = true;
+            var mousePosition = getMousePosition(canvas, evt);
+            mouseX = mousePosition.x;
+            mouseY = mousePosition.y;
+        }
+    }, false);
+    canvas.addEventListener('mousemove', function(evt) {
+        if (mousePressed) {
+            var mousePosition = getMousePosition(canvas, evt);
+            var diffX = mousePosition.x - mouseX;
+            var diffY = mousePosition.y - mouseY;
+            mouseX = mousePosition.x;
+            mouseY = mousePosition.y;
+            rotateCamera(diffY, [1, 0, 0]);
+            rotateCamera(diffX, [0, 1, 0]);
+        }
+    }, false);
+    canvas.addEventListener('mouseup', function(evt) {
+        if (evt.button == 0) {
+            mousePressed = false;
+        }
+    }, false);
+</script>
+</html>

@@ -6,92 +6,71 @@
 		<script src="../js/commonFunctions.js"></script>
 		<script src="../js/gl-matrix-min.js"></script>
 		<script src="../js/webglTools.js"></script>
+		<script src="../js/loadModel3D.js"></script>
+		<script src="../js/OBJ_loader.js"></script>
 		<script src="scene.js"></script>
 		<script src="planet.js"></script>
 		<script id="shader-vs" type="x-shader/x-vertex">
+			const vec3 lightpos = vec3(0.0, 0.0, 0.0);
 			attribute vec3 aVertexPosition;
-			//attribute vec4 aColor;
+			attribute vec2 aTextureCoord;
 		    uniform mat4 uMVMatrix;
 		    uniform mat4 uPMatrix;
-			uniform vec3 center;
-			varying vec3 aCenter;
-			varying vec4 vColor;
-			varying vec3 vPosition;
-			varying vec3 vLightpos;
+			uniform vec3 center; // fixme
 			uniform float radius;
-			uniform int vmode;
-			uniform vec3 uColor;
-			const vec3 lightpos = vec3(0.0, 0.0, 0.0);
+			uniform int vmode; // fixme
+			varying vec3 vLightpos;
+			varying vec2 vTextureCoord;
 		    void main(void) {
-				//vColor = aColor;
-		        vColor = vec4(uColor, 1.0);
 				gl_PointSize = 4.0;
-				if(vmode != 0) // billboards
-				{
-					vec4 a = uPMatrix * vec4(aVertexPosition * radius, 1.0);
-					vec4 c = uPMatrix * uMVMatrix * vec4(center, 1.0);
-					gl_Position = c + a;
-					vPosition = gl_Position.xyz;
-					aCenter = c.xyz;
-					vLightpos = (uPMatrix * uMVMatrix * vec4(lightpos, 1.0)).xyz;
-				}
-				else
-				{
-					gl_Position = uPMatrix * uMVMatrix * vec4(center, 1.0);
-					vPosition = center;
-				}
+				vTextureCoord = aTextureCoord;
+				vec4 a = uPMatrix * vec4(aVertexPosition * radius, 1.0);
+				vec4 c = uPMatrix * uMVMatrix * vec4(center, 1.0);
+				vLightpos = (uPMatrix * uMVMatrix * vec4(lightpos, 1.0)).xyz;	
+				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition * radius + center, 1.0);
 			}
 		</script>
 		<script id="shader-fs" type="x-shader/x-fragment">
 			#ifdef GL_ES
 				precision highp float;
 			#endif
-		    uniform mat4 uMVMatrix;
-		    uniform mat4 uPMatrix;
-			varying vec4 vColor;
-			varying vec3 vPosition;
-			uniform int fmode;
-			uniform float radius;
-			varying vec3 aCenter;
-			varying vec3 vLightpos;
-			const float amb = 0.5;
-			const float spec = 0.5;
-			const float diff = 0.5;
 			const float alpha = 8.0;
+			uniform int fmode; // fixme
+			uniform sampler2D uColorTexture;
+			uniform sampler2D uNormalTexture;
+			uniform sampler2D uSpecularTexture;
+			varying vec3 vLightpos;
+			varying vec2 vTextureCoord;
 			void main(void) {
-				if(fmode == 1) // billboards
+				vec2 mapCoord = vec2(vTextureCoord.s, vTextureCoord.t);
+				vec4 texelColor = texture2D(uColorTexture, mapCoord);
+				vec4 texelNormal = texture2D(uNormalTexture, mapCoord);
+				vec4 texelSpecular = texture2D(uSpecularTexture, mapCoord);
+				
+				vec3 finalColor;
+				vec3 L = normalize(vLightpos);
+				vec3 N = normalize(texelNormal.rgb);
+				float lambertTerm = dot(N, -L);
+				if(lambertTerm > -2.0)
 				{
-					// vec3 lightPos = vec3(0.0, 0.0, 0.0);
-					vec3 center = aCenter;
-					float r = radius;
-					float dist = distance(center.xy, vPosition.xy);
-					if(dist <= r)
-					{
-						vec3 lightPos = vLightpos;
-						float z = sqrt(r * r - dist * dist);
-						vec3 N = normalize(vec3(vPosition.x - center.x, vPosition.y - center.y, z));
-						vec3 L = normalize((center + N * r) - lightPos);
-						// vec3 V = normalize((center + N * r) - /*???*/ vec3(0.0, 0.0, 1.0));
-						vec3 V = normalize((center + N * r) - (uPMatrix * uMVMatrix * vec4(0.0, 0.0, 1.0, 1.0)).xyz);
-						// vec3 V = normalize(vec3(0.0, 0.0, 1.0));
-						vec3 R = normalize(reflect(-L, N));
-						vec3 ambientColor = vColor.xyz * amb;
-						vec3 diffuseColor = diff * vColor.xyz * (dot(L, N) - 0.5);
-						vec3 specularColor = vec3(spec, spec, spec) * pow(max(dot(R, V), 0.0), alpha);
-						gl_FragColor = vec4(ambientColor + diffuseColor + specularColor, 1.0);
-						// radius < distance(center.xy, vPosition.xy) ? gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0) : 
-						// gl_FragColor = vec4(vColor.xyz, step(dist, r));	
-					}
-				}
-				else if(fmode == 2) // sun
-				{
-					float r = radius;
-					float dist = distance(aCenter.xy, vPosition.xy);
-					gl_FragColor = vec4(vColor.xyz, step(dist, r));
+					/**/
+					vec3 uMaterialDiffuse = vec3(0.5, 0.5, 0.5);
+					vec3 uMaterialSpecular = vec3(0.5, 0.5, 0.5);
+					vec3 vEyeVec = vec3(0.0, 0.0, 1.0);
+					/**/
+					
+					vec3 finalColor = vec3(0.0,0.0,0.0);
+					// finalColor += uMaterialDiffuse * lambertTerm;
+					
+					vec3 E = normalize(vEyeVec);
+					vec3 R = reflect(L, N);
+					float specular = pow(max(dot(R, E), 0.0), alpha);
+					// finalColor += uMaterialSpecular * specular * texelSpecular.rgb;
+					gl_FragColor = vec4(finalColor + texelColor.rgb, 1.0);
 				}
 				else
 				{
-					gl_FragColor = vColor;
+					gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
 				}
 			}
 		</script>

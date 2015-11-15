@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script src="js/loadModel3D.js"></script>
+		<script src="js/OBJ_loader.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec3 aNormalPosition;
+			attribute vec2 aTextureCoord;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			uniform mat4 uNMatrix;
+			uniform int dong;
+			uniform float uShininess;
+			uniform vec3 uLightAmbient;
+			uniform vec3 uMaterialDiffuse;
+			uniform vec3 uMaterialSpecular;
+			uniform vec3 uLightPosition;
+			varying vec3 normals;
+			varying vec3 vLightRay;
+			varying vec3 vEyeVec;
+			varying vec3 vColor;
+			varying vec2 vTextureCoord;
+			void main(void) {
+				vTextureCoord = aTextureCoord;
+				vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);
+				vec4 light = vec4(uLightPosition,1.0);
+				vLightRay = vertex.xyz - light.xyz;
+				vEyeVec = -vec3(vertex.xyz);
+				normals = vec3(uNMatrix * vec4(aNormalPosition, 1.0));
+				
+				gl_Position = uPMatrix * vertex;
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+				precision highp float;
+				precision highp int; // black magic at work
+			#endif
+			uniform int dong;
+			uniform float uShininess;
+			uniform vec3 uLightAmbient;
+			uniform vec3 uMaterialDiffuse;
+			uniform vec3 uMaterialSpecular;
+			uniform sampler2D uColorTexture;
+			uniform sampler2D uNormalTexture;
+			uniform sampler2D uSpecularTexture;
+			varying vec3 normals;
+			varying vec3 vLightRay;
+			varying vec3 vEyeVec;
+			varying vec3 vColor;
+			varying vec2 vTextureCoord;
+			void main(void) {
+				vec2 mapCoord = vec2(vTextureCoord.s, vTextureCoord.t);
+				vec4 texelColor = texture2D(uColorTexture, mapCoord);
+				vec4 texelNormal = texture2D(uNormalTexture, mapCoord);
+				vec4 texelSpecular = texture2D(uSpecularTexture, mapCoord);
+				
+				vec3 finalColor;
+				
+				vec3 L = normalize(vLightRay);
+				vec3 N = normalize(2.0*texelNormal.rgb - 1.0);
+				float lambertTerm = dot(N, -L);
+				
+				if(lambertTerm > 0.0)
+				{
+					float squaredDistanceToLight = vLightRay.x*vLightRay.x+vLightRay.y*vLightRay.y+vLightRay.z*vLightRay.z;
+
+					finalColor = uMaterialDiffuse * lambertTerm;
+					
+					vec3 E = normalize(vEyeVec);
+					vec3 R = reflect(L, N);
+					float specular = pow( max(dot(R, E), 0.0), uShininess);
+					finalColor += uMaterialSpecular * specular * texelSpecular.rgb;
+					gl_FragColor = vec4(finalColor*texelColor.rgb, 1.0);
+				}
+				else
+				{
+					gl_FragColor = vec4(0.0,0.0,0.0,1.0);
+				}
+			}
+		</script>
+		<script>
+			var rotY = 0;
+			var rotX = 0;
+			var translateZ = -25.0;
+			var vertexBuffersArray = [];
+			var indexBuffersArray = [];
+			var normalBuffersArray = [];
+			var textCoordsBuffer = null;
+			var textCoords =[];
+			var texColorTab = new Array();
+			var indicesArray = [];
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();
+			var dong = 1;
+			window.onkeydown = function(e) {
+				switch(e.keyCode){
+					case 87:
+						//w
+						translateZ += 0.5;
+						break;
+					case 83:
+						//s
+						translateZ -= 0.5;
+						break;
+					case 71:
+						//g
+						dong = 0;
+						break;
+					case 80:
+						//p
+						dong = 1;
+						break;
+					default:
+						console.log(e.keyCode);
+				}
+			};
+			// COPY PASTE + get more info
+			function handleOBJModel(filename, data){
+				console.info(filename + ' has been retrieved from the server');
+				
+				var objData = new OBJ.Mesh(data);
+				vertexBuffer = getVertexBufferWithVertices(objData.vertices);
+				normalsBuffer = getVertexBufferWithVertices(objData.vertexNormals);
+				textureBuffer = getVertexBufferWithVertices(objData.textures);
+				indexBuffer = getIndexBufferWithIndices(objData.indices);				
+				
+				// added this
+				// normals on vertex
+				var normals = objData.vertexNormals;
+				var vertices = objData.vertices;
+				var norms = [];
+				var norms2 = [];
+				indicesArray.push([]);
+				for(var i = 0; i < objData.indices.length; i++)
+				{
+					norms.push(vertices[i * 3] * 1);
+					norms.push(vertices[i * 3 + 1] * 1);
+					norms.push(vertices[i * 3 + 2] * 1);
+					norms.push(normals[i * 3] * 1 + vertices[i * 3] * 1);
+					norms.push(normals[i * 3 + 1] * 1 + vertices[i * 3 + 1] * 1);
+					norms.push(normals[i * 3 + 2] * 1 + vertices[i * 3 + 2] * 1);
+					norms2.push(0, 0, 0, 0, 0, 0);
+					indicesArray[0].push(indicesArray[0].length);
+					indicesArray[0].push(indicesArray[0].length);
+				}
+				
+				//normals on triangles
+				var norms3 = [];
+				var norms4 = [];
+				indicesArray.push([]);
+				for(var j = 0; j < objData.indices.length; j += 3)
+				{
+					var i0 = objData.indices[j] * 3;
+					var i1 = objData.indices[j + 1] * 3;
+					var i2 = objData.indices[j + 2] * 3;
+					var N = findNormal(
+						[vertices[i0] * 1, vertices[i0 + 1] * 1, vertices[i0 + 2] * 1],
+						[vertices[i1] * 1, vertices[i1 + 1] * 1, vertices[i1 + 2] * 1],
+						[vertices[i2] * 1, vertices[i2 + 1] * 1, vertices[i2 + 2] * 1]
+					);
+					var vx = (vertices[i0] * 1 + vertices[i1] * 1 + vertices[i2] * 1) / 3;
+					var vy = (vertices[i0 + 1] * 1 + vertices[i1 + 1] * 1 + vertices[i2 + 1] * 1) / 3;
+					var vz = (vertices[i0 + 2] * 1 + vertices[i1 + 2] * 1 + vertices[i2 + 2] * 1) / 3;
+					norms3.push(vx, vy, vz);
+					norms3.push(N[0] + vx, N[1] + vy, N[2] + vz);
+					norms4.push(0, 0, 0, 0, 0, 0);
+					indicesArray[1].push(indicesArray[1].length);
+					indicesArray[1].push(indicesArray[1].length);
+				}
+				
+				indexBuffersArray.push(getIndexBufferWithIndices(indicesArray[0]));
+				vertexBuffersArray.push(getVertexBufferWithVertices(norms));
+				normalBuffersArray.push(getVertexBufferWithVertices(norms2));
+				
+				indexBuffersArray.push(getIndexBufferWithIndices(indicesArray[1]));
+				vertexBuffersArray.push(getVertexBufferWithVertices(norms3));
+				normalBuffersArray.push(getVertexBufferWithVertices(norms4));
+				
+				vertexBuffersArray.push(vertexBuffer);
+				normalBuffersArray.push(normalsBuffer);
+				textureBuffersArray.push(textureBuffer);
+				indexBuffersArray.push(indexBuffer);
+				indicesArray.push(objData.indices);	
+				
+				// test part
+				textCoords = objData.textures;
+				textCoordsBuffer = getArrayBufferWithArray(textCoords);
+			}
+			function findNormal(v1,v2,v3)
+			{
+				var N = [
+					(v2[1]- v1[1]) * (v3[2] - v1[2]) - (v2[2] - v1[2]) * (v3[1] - v1[1]),
+					(v2[2]- v1[2]) * (v3[0] - v1[0]) - (v2[0] - v1[0]) * (v3[2] - v1[2]),
+					(v2[0]- v1[0]) * (v3[1] - v1[1]) - (v2[1] - v1[1]) * (v3[0] - v1[0]),
+				];
+				var norm = Math.sqrt(N[0] * N[0] + N[1] * N[1] + N[2] * N[2]);
+				N[0] /= norm;
+				N[1] /= norm;
+				N[2] /= norm;
+				return N;
+			}
+			// COPY PASTE
+			function loadModel(filename){
+				var request = new XMLHttpRequest();
+				console.info('Requesting ' + filename);
+				request.open("GET",filename);
+				
+				request.onreadystatechange = function() {
+				  if (request.readyState == 4) {
+					if(request.status == 404) {
+						console.info(filename + ' does not exist');
+					 }
+					else {
+						var re = /(?:\.([^./]+))?$/;
+						var ext = re.exec(filename)[1];
+						console.info('file: '+ filename + ', ext: ' + ext);
+						switch( ext ){
+							case "json": handleJSONModel(filename, JSON.parse(request.responseText)); break;
+							case "obj":  handleOBJModel(filename, request.responseText); break;
+							default: console.info("unknown format extension: " + ext );
+						}
+					}
+				  }
+				}
+				request.send();
+			}
+			function initShaderParameters(prg){
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				prg.normalPositionAttribute = glContext.getAttribLocation(prg, "aNormalPosition");
+				glContext.enableVertexAttribArray(prg.normalPositionAttribute);
+				prg.textureCoordsAttribute  = glContext.getAttribLocation(prg, "aTextureCoord");
+				glContext.enableVertexAttribArray(prg.textureCoordsAttribute);
+				prg.colorTextureUniform 	= glContext.getUniformLocation(prg, "uColorTexture");
+				prg.normalTextureUniform 	= glContext.getUniformLocation(prg, "uNormalTexture");
+				prg.specularTextureUniform 	= glContext.getUniformLocation(prg, "uSpecularTexture");
+				prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
+				prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
+				prg.nMatrixUniform = glContext.getUniformLocation(prg, 'uNMatrix');
+				prg.dong = glContext.getUniformLocation(prg, 'dong');
+			    prg.lightPositionUniform = glContext.getUniformLocation(prg, 'uLightPosition');
+			    prg.shininessUniform = glContext.getUniformLocation(prg, 'uShininess');
+			    prg.lightAmbientUniform = glContext.getUniformLocation(prg, 'uLightAmbient');
+			    prg.materialDiffuseUniform = glContext.getUniformLocation(prg, 'uMaterialDiffuse');
+			    prg.materialSpecularUniform = glContext.getUniformLocation(prg, 'uMaterialSpecular');
+			}
+			function initLights(){
+			    glContext.uniform3f(prg.lightPositionUniform, 1, 1, 1);
+			    glContext.uniform3f(prg.lightAmbientUniform, 0.1, 0.1, 0.1);
+				glContext.uniform3f(prg.materialSpecularUniform, 0.5, 0.5, 0.5);
+				glContext.uniform3f(prg.materialDiffuseUniform, 0.6, 0.6, 0.6);
+			    glContext.uniform1f(prg.shininessUniform, 32.0);
+			}
+			function drawScene(){
+				glContext.clearColor(0.0, 0.0, 0.0, 1.0);
+				glContext.enable(glContext.DEPTH_TEST);
+				
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				
+				glContext.viewport(0, 0, c_width, c_height);
+				mat4.perspective(pMatrix, degToRad(60.0), c_width / c_height, 0.1, 10000.0);
+				translationMat = mat4.create();
+				mat4.identity(translationMat);
+				mat4.translate(translationMat, translationMat, [0.0, -2.0, translateZ]);
+				
+				rotateModelViewMatrixUsingQuaternion();
+				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				mvtMatrix = mat4.create();
+				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mat4.multiply(mvtMatrix, translationMat, mvMatrix));
+				rotX = 0;
+				rotY = 0;
+				var nMatrix = mat4.create();
+			    mat4.copy(nMatrix, mvMatrix);
+			    mat4.invert(nMatrix, nMatrix);
+			    mat4.transpose(nMatrix, nMatrix);
+			    glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);
+				if(indicesArray.length > 1)
+				{
+					glContext.uniform1i(prg.dong, dong);
+					
+					// vertices
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffersArray[2]);
+					glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+					// vertex normals
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, normalBuffersArray[2]);
+					glContext.vertexAttribPointer(prg.normalPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+					// tex
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
+					glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
+					glContext.activeTexture(glContext.TEXTURE0);
+					glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[0]);
+					glContext.uniform1i(prg.colorTextureUniform, 0);
+					glContext.activeTexture(glContext.TEXTURE1);
+					glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[1]);
+					glContext.uniform1i(prg.normalTextureUniform, 1);
+					glContext.activeTexture(glContext.TEXTURE2);
+					glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[2]);
+					glContext.uniform1i(prg.specularTextureUniform, 2);
+					// indices
+					glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffersArray[2]);
+					
+					glContext.drawElements(glContext.TRIANGLES, indicesArray[2].length, glContext.UNSIGNED_SHORT,0);
+				}
+			}
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				initProgram();
+				initLights();
+				loadModel("models/OBJ/bunnyHighPoly.obj");
+				initTextureWithImage( "fig/sample03_colorMap.png", texColorTab );
+				initTextureWithImage( "fig/sample03_normalMap.png", texColorTab );
+				initTextureWithImage( "fig/sample03_specularMap.png", texColorTab );
+				renderLoop();
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<br/>
+		Salut c'est un triangle
+		<br/>
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+	</body>
+	<script src='../js/mouseMotionHandling.js'></script>
+</html>

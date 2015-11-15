@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script src="js/OBJ_loader.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+		attribute vec3 aVertexPosition;
+		attribute vec3 aVertexNormal;
+		uniform mat4 uMVMatrix;
+		uniform mat4 uPMatrix;
+		uniform mat4 uNMatrix;
+		uniform vec3 uLightPosition;
+		varying vec3 vNormal;
+		varying vec3 vLightRay;
+		varying vec3 vEyeVec;
+		void main(void) {
+			vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);
+		    vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
+		    vec4 light = vec4(uLightPosition,1.0);
+		    vLightRay = - light.xyz;
+		    vEyeVec = -vec3(vertex.xyz);
+		    gl_Position = uPMatrix * vertex;
+		}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+		#ifdef GL_ES
+		precision highp float;
+		#endif
+		uniform int uDrawNormal;
+		uniform float uShininess;
+		uniform vec3 uLightAmbient;
+		uniform vec3 uMaterialDiffuse;
+		uniform vec3 uMaterialSpecular;
+		varying vec3 vNormal;
+		varying  vec3 vLightRay;
+		varying  vec3 vEyeVec;
+		void main(void)
+		{
+			vec3 finalColor = uMaterialDiffuse;
+			if (uDrawNormal != 1){
+				vec3 L = normalize(vLightRay);
+				vec3 N = normalize(vNormal);
+				float lambertTerm = dot(N,-L);
+				finalColor = uLightAmbient;
+				if(lambertTerm > 0.0)
+				{
+					finalColor += uMaterialDiffuse * lambertTerm;
+					vec3 E = normalize(vEyeVec);
+					vec3 R = reflect(L, N);
+					float specular = pow( max(dot(R, E), 0.0), uShininess);
+					finalColor += uMaterialSpecular * specular;
+				}
+			}
+			gl_FragColor = vec4(finalColor, 1.0);
+		}
+		</script>
+		<script>
+			var vertexBuffersArray = [];
+			var indexBuffersArray = [];
+			var normalBuffersArray = [];
+			var indicesArray = [];
+			var normalsPerVertexBuffersArray = [];
+			var normalsPerVertexIndexBuffersArray = [];
+			var normalsPerVertexNormalsBuffersArray = [];
+			var normalsPerVertexIndicesArray = [];
+			var normalsPerTriangleBuffersArray = [];
+			var normalsPerTriangleIndexBuffersArray = [];
+			var normalsPerTriangleNormalsBuffersArray = [];
+			var normalsPerTriangleIndicesArray = [];
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();
+			var nMatrix = mat4.create();
+			var tx = 0;
+			var ty = -4.0;
+			var tz = -20;
+			window.onkeydown = checkKey;
+			function checkKey(ev){
+				switch(ev.keyCode){
+					case 87:
+						tz++;
+						break;
+					case 83:
+						tz--;
+						break;
+					case 68:
+						tx++;
+						break;
+					case 65:
+						tx--;
+						break;
+					case 82:
+						ty++;
+						break;
+					case 70:
+						ty--;
+						break;
+					default:
+					  console.log(ev.keyCode);
+					break;
+				}
+			}
+			function initShaderParameters(prg){
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+			    glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+			    prg.vertexNormalAttribute = glContext.getAttribLocation(prg, "aVertexNormal");
+			    glContext.enableVertexAttribArray(prg.vertexNormalAttribute);
+			    prg.pMatrixUniform             = glContext.getUniformLocation(prg, 'uPMatrix');
+			    prg.mvMatrixUniform            = glContext.getUniformLocation(prg, 'uMVMatrix');
+			    prg.nMatrixUniform             = glContext.getUniformLocation(prg, 'uNMatrix');
+			    prg.lightPositionUniform       = glContext.getUniformLocation(prg, 'uLightPosition');
+				prg.drawNormalUniform		   = glContext.getUniformLocation(prg, 'uDrawNormal');
+			    prg.shininessUniform           = glContext.getUniformLocation(prg, 'uShininess');
+			    prg.lightAmbientUniform        = glContext.getUniformLocation(prg, 'uLightAmbient');
+			    prg.materialDiffuseUniform     = glContext.getUniformLocation(prg, 'uMaterialDiffuse');
+			    prg.materialSpecularUniform    = glContext.getUniformLocation(prg, 'uMaterialSpecular');
+			}
+			function loadModel(filename){
+			    var request = new XMLHttpRequest();
+			    console.info('Requesting ' + filename);
+			    request.open("GET",filename);
+			    request.onreadystatechange = function() {
+			      if (request.readyState == 4) {
+			        if(request.status == 404) {
+			            console.info(filename + ' does not exist');
+			         }
+			        else {
+						handleOBJModel(filename, request.responseText);
+			        }
+			      }
+			    }
+			    request.send();
+			}
+			function handleOBJModel(filename, data){
+				console.info(filename + ' has been retrieved from the server');
+				var objData = new OBJ.Mesh(data);
+				vertexBuffer = getVertexBufferWithVertices(objData.vertices);
+				normalsBuffer = getVertexBufferWithVertices(objData.vertexNormals);
+				indexBuffer = getIndexBufferWithIndices(objData.indices);
+				createNormalsPerVertex(objData);
+				createNormalsPerTriangle(objData);
+				vertexBuffersArray.push(vertexBuffer);
+				indexBuffersArray.push(indexBuffer);
+				normalBuffersArray.push(normalsBuffer);
+				indicesArray.push(objData.indices);
+			}
+			function createNormalsPerVertex(objData){
+				var normalsPerVertex = Array();
+				var normalsPerNormal = Array();
+				var nPerVindices = Array();
+				for (var i = 0; i < objData.indices.length; i++){
+					var vi = objData.indices[i]*3;
+					var vertex = [];
+					vertex.push(objData.vertices[vi]*1.0, objData.vertices[vi+1]*1.0, objData.vertices[vi+2]*1.0);
+					normalsPerVertex.push(vertex[0], vertex[1], vertex[2]);
+					normalsPerNormal.push(-2.0,0.0,0.0);
+					nPerVindices.push(nPerVindices.length);
+					normalsPerVertex.push(vertex[0] + objData.vertexNormals[vi]*1.0,
+					vertex[1] + objData.vertexNormals[vi+1]*1.0,
+					vertex[2] + objData.vertexNormals[vi+2]*1.0);
+					normalsPerNormal.push(-2.0,0.0,0.0);
+					nPerVindices.push(nPerVindices.length);
+				}
+				vba = getVertexBufferWithVertices(normalsPerVertex);
+				nba = getVertexBufferWithVertices(normalsPerNormal);
+				i = getIndexBufferWithIndices(nPerVindices);
+				normalsPerVertexBuffersArray.push(vba);
+				normalsPerVertexNormalsBuffersArray.push(nba);
+				normalsPerVertexIndexBuffersArray.push(i);
+				normalsPerVertexIndicesArray.push(nPerVindices);
+			}
+			function createNormalsPerTriangle(objData){
+				var normalsPerTriangle = Array();
+				var normalsPerNormal = Array();
+				var nPerTindices = Array();
+				for (var i = 0; i < objData.indices.length; i+=3){
+					var v0 = objData.indices[i]*3;
+					var v1 = objData.indices[i+1]*3;
+					var v2 = objData.indices[i+2]*3;
+					var vertex0 = [];
+					vertex0.push(objData.vertices[v0]*1.0, objData.vertices[v0+1]*1.0, objData.vertices[v0+2]*1.0);
+					var vertex1 = [];
+					vertex1.push(objData.vertices[v1]*1.0, objData.vertices[v1+1]*1.0, objData.vertices[v1+2]*1.0);
+					var vertex2 = [];
+					vertex2.push(objData.vertices[v2]*1.0, objData.vertices[v2+1]*1.0, objData.vertices[v2+2]*1.0);
+					var v01 = [];
+					v01.push(vertex1[0]-vertex0[0], vertex1[1]-vertex0[1], vertex1[2]-vertex0[2]);
+					var v02 = [];
+					v02.push(vertex2[0]-vertex0[0], vertex2[1]-vertex0[1], vertex2[2]-vertex0[2]);
+					var triangleNormal = crossProduct(v01, v02);
+					triangleNormal = normalize(triangleNormal);
+					var barycenter = [];
+					for (var j = 0; j<3; j++){
+						var coord = vertex0[j] + 2/3*(vertex2[j] - vertex0[j] + 1/2*(vertex1[j]-vertex2[j]));
+						barycenter.push(coord);
+					}
+					normalsPerTriangle.push(barycenter[0], barycenter[1], barycenter[2]);
+					normalsPerNormal.push(-2.0,0.0,0.0);
+					nPerTindices.push(nPerTindices.length);
+					normalsPerTriangle.push(barycenter[0] + triangleNormal[0],
+											barycenter[1] + triangleNormal[1],
+											barycenter[2] + triangleNormal[2]);
+					normalsPerNormal.push(-2.0,0.0,0.0);
+					nPerTindices.push(nPerTindices.length);
+				}
+				vba = getVertexBufferWithVertices(normalsPerTriangle);
+				nba = getVertexBufferWithVertices(normalsPerNormal);
+				ti = getIndexBufferWithIndices(nPerTindices);
+				normalsPerTriangleBuffersArray.push(vba);
+				normalsPerTriangleNormalsBuffersArray.push(nba);
+				normalsPerTriangleIndexBuffersArray.push(ti);
+				normalsPerTriangleIndicesArray.push(nPerTindices);
+			}
+			function crossProduct(u, v){
+				p = [];
+				p.push(u[1]*v[2] - u[2]*v[1],
+						u[2]*v[0] - u[0]*v[2],
+						u[0]*v[1] - u[1]*v[0]);
+				return p;
+			}
+			function normalize(v){
+				n = [];
+				m = Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+				n.push(v[0]/m, v[1]/m, v[2]/m);
+				return n;
+			}
+			function initLights(){
+			    glContext.uniform3f(prg.lightPositionUniform, 0, 1, 1);
+			    glContext.uniform3f(prg.lightAmbientUniform,0.1,0.1,0.1);
+				glContext.uniform3f(prg.materialSpecularUniform, 0.5,0.5,0.5);
+				glContext.uniform3f(prg.materialDiffuseUniform, 0.6,0.6,0.6);
+			    glContext.uniform1f(prg.shininessUniform, 10000.0);
+			}
+			function drawObject(modelViewMatrix, vertexBuffer, normalsBuffer, indexBuffer, indexCount, glPrimitive){
+			    glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, modelViewMatrix);
+			    mat4.copy(nMatrix, modelViewMatrix);
+			    mat4.invert(nMatrix, nMatrix);
+			    mat4.transpose(nMatrix, nMatrix);
+			    glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, normalsBuffer);
+				glContext.vertexAttribPointer(prg.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+				glContext.drawElements(glPrimitive, indexCount, glContext.UNSIGNED_SHORT,0);
+			}
+			function startRenderLoop(){
+				initLights();
+				mat4.identity(mvMatrix);
+				renderLoop();
+			}
+			function drawScene(){
+				glContext.clearColor(0.9, 0.9, 1.0, 1.0);
+				glContext.enable(glContext.DEPTH_TEST);
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				glContext.viewport(0, 0, c_width, c_height);
+			    mat4.perspective(pMatrix, degToRad(60), c_width / c_height, 0.1, 1000.0);
+			    glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				if(indicesArray.length > 0){
+					translationMat = mat4.create();
+					mat4.identity(translationMat);
+					mat4.translate(translationMat, translationMat, [tx, ty, tz]);
+					rotateModelViewMatrixUsingQuaternion(true);
+					var modelViewMatrix = mat4.multiply(mat4.create(), translationMat, mvMatrix);
+					glContext.uniform1i(prg.drawNormalUniform, 1);
+					glContext.uniform3f(prg.materialDiffuseUniform, 1.0,0.,0.);
+					drawObject(modelViewMatrix, normalsPerVertexBuffersArray[0],
+						normalsPerVertexNormalsBuffersArray[0], normalsPerVertexIndexBuffersArray[0],
+						normalsPerVertexIndicesArray[0].length, glContext.LINES);
+					glContext.uniform1i(prg.drawNormalUniform, 1);
+					glContext.uniform3f(prg.materialDiffuseUniform, 0.0,0.0,1.0);
+					drawObject(modelViewMatrix, normalsPerTriangleBuffersArray[0],
+						normalsPerTriangleNormalsBuffersArray[0], normalsPerTriangleIndexBuffersArray[0],
+						normalsPerTriangleIndicesArray[0].length, glContext.LINES);
+					glContext.uniform1i(prg.drawNormalUniform, 0);
+					glContext.uniform3f(prg.materialDiffuseUniform, 0.6,0.6,0.6);
+					drawObject(modelViewMatrix, vertexBuffersArray[0],
+						normalBuffersArray[0], indexBuffersArray[0],
+						indicesArray[0].length, glContext.TRIANGLES);
+				}
+			}
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				initProgram();
+				loadModel("models/OBJ/bunnyLowPoly.obj");
+				startRenderLoop();
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<script>displayTitle("Ch.08 Ex.1 : Visualisation des normales des sommets et des polygônes (barycentre)", 1,1,1,1,1,1,1);</script>
+		<br>
+		<p>Rotation avec la souris, translation: X: [a,d]: Y: [r,f] Z: [w,s]</p>
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+	</body>
+	<script src='./js/mouseMotionHandling.js'></script>
+</html>

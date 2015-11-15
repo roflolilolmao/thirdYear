@@ -16,12 +16,23 @@ var solarSystem;
 var pause = true;
 var orbitBool = false;
 var translateZ = -2.0;
+
 var vertexBuffer = null;
 var indexBuffer = null;
-//var colorBuffer = null;
-var indices = [];
-var vertices = [];
-//var colors = [];
+var normalsBuffer = null;
+var textureBuffer = null;
+
+var textureBuffersArray = [];
+var vertexBuffersArray = [];
+var normalBuffersArray = [];
+var indexBuffersArray = [];
+
+var indicesArray = [];
+
+var textCoordsBuffer = null;
+var textCoords =[];
+var texColorTab = new Array();
+
 var mvMatrix = mat4.create();
 var pMatrix = mat4.create();
 mat4.identity(mvMatrix);
@@ -43,40 +54,42 @@ function initShaderParameters(prg)
 {
 	prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
 	glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
-	//prg.colorAttribute = glContext.getAttribLocation(prg, "aColor");
-	//glContext.enableVertexAttribArray(prg.colorAttribute);
-	prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
-	prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
-	prg.fmode = glContext.getUniformLocation(prg, 'fmode');
-	prg.vmode = glContext.getUniformLocation(prg, 'vmode');
-	prg.radius = glContext.getUniformLocation(prg, 'radius');
-	prg.center = glContext.getUniformLocation(prg, 'center');
-	prg.colorPlanet = glContext.getUniformLocation(prg, 'uColor');
+	prg.textureCoordsAttribute  = glContext.getAttribLocation(prg, "aTextureCoord");
+	glContext.enableVertexAttribArray(prg.textureCoordsAttribute);
+	prg.colorTextureUniform 	= glContext.getUniformLocation(prg, "uColorTexture");
+	prg.normalTextureUniform 	= glContext.getUniformLocation(prg, "uNormalTexture");
+	prg.specularTextureUniform 	= glContext.getUniformLocation(prg, "uSpecularTexture");
+	prg.pMatrixUniform 			= glContext.getUniformLocation(prg, 'uPMatrix');
+	prg.mvMatrixUniform 		= glContext.getUniformLocation(prg, 'uMVMatrix');
+	prg.fmode 					= glContext.getUniformLocation(prg, 'fmode');
+	prg.vmode 					= glContext.getUniformLocation(prg, 'vmode');
+	prg.radius 					= glContext.getUniformLocation(prg, 'radius');
+	prg.center 					= glContext.getUniformLocation(prg, 'center');
+	prg.colorPlanet 			= glContext.getUniformLocation(prg, 'uColor');
 }
 function initBuffers()
 {
-	vertices = [];
-	indices = [];
-	colors = [];
-	vertices.push(1.0, 1.0, 0.0);
-	vertices.push(-1.0, 1.0, 0.0);
-	vertices.push(1.0, -1.0, 0.0);
-	vertices.push(-1.0, -1.0, 0.0);
-	//colors.push(1.0, 1.0, 1.0, 1.0);
-	//colors.push(1.0, 1.0, 1.0, 1.0);
-	//colors.push(1.0, 1.0, 1.0, 1.0);
-	//colors.push(1.0, 1.0, 1.0, 1.0);
-	indices.push(0,  1,  2,  3);
-	vertexBuffer = getVertexBufferWithVertices(vertices);
-	indexBuffer = getIndexBufferWithIndices(indices);
-	//colorBuffer = getVertexBufferWithVertices(colors);
-
-	glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+	// vertices
+	glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffersArray[0]);
 	glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
-	//glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
-	//glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
-	glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
-
+	// vertex normals
+	// glContext.bindBuffer(glContext.ARRAY_BUFFER, normalBuffersArray[0]);
+	// glContext.vertexAttribPointer(prg.normalPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+	// tex
+	glContext.bindBuffer(glContext.ARRAY_BUFFER, textureBuffersArray[0]);
+	glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
+	
+	glContext.activeTexture(glContext.TEXTURE0);
+	glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[0]);
+	glContext.uniform1i(prg.colorTextureUniform, 0);
+	glContext.activeTexture(glContext.TEXTURE1);
+	glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[1]);
+	glContext.uniform1i(prg.normalTextureUniform, 1);
+	glContext.activeTexture(glContext.TEXTURE2);
+	glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[2]);
+	glContext.uniform1i(prg.specularTextureUniform, 2);
+	// indices
+	glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffersArray[0]);
 }
 function initScene()
 {
@@ -117,11 +130,7 @@ function drawSystem()
 function drawScene()
 {
 	glContext.clearColor(0.0, 0.0, 0.0, 1.0);
-	// glContext.enable(glContext.DEPTH_TEST);
-	
-	glContext.blendFunc(glContext.SRC_ALPHA, glContext.ONE_MINUS_SRC_ALPHA);
-	glContext.enable(glContext.BLEND);
-	glContext.disable(glContext.DEPTH_TEST);
+	glContext.enable(glContext.DEPTH_TEST);
 	
 	glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
 	
@@ -139,16 +148,20 @@ function drawScene()
 	rotY = 0;
 	
 	if (!pause) solarSystem.update();
-	
-	drawSystem();
+	if(indicesArray.length > 0)
+	{
+		drawSystem();
+	}
 }
 function initWebGL()
 {
 	glContext = getGLContext('webgl-canvas');
 	initProgram();
-	initBuffers();
+	loadModel("ressources/earth.obj");
+	initTextureWithImage( "ressources/texMap4k_Earth_main.jpg", texColorTab );
+	initTextureWithImage( "ressources/texMap4k_Earth_normal.jpg", texColorTab );
+	initTextureWithImage( "ressources/planetEarth_specularMap.jpg", texColorTab );
 	initScene();
-	renderLoop();
 }
 function pauseBoolF()
 {
@@ -157,4 +170,23 @@ function pauseBoolF()
 function orbitBoolF()
 {
 	orbitBool = !orbitBool;
+}
+
+function handleOBJModel(filename, data){
+	console.info(filename + ' has been retrieved from the server');
+	
+	var objData = new OBJ.Mesh(data);
+	vertexBuffer = getVertexBufferWithVertices(objData.vertices);
+	normalsBuffer = getVertexBufferWithVertices(objData.vertexNormals);
+	textureBuffer = getVertexBufferWithVertices(objData.textures);
+	indexBuffer = getIndexBufferWithIndices(objData.indices);
+	
+	vertexBuffersArray.push(vertexBuffer);
+	normalBuffersArray.push(normalsBuffer);
+	textureBuffersArray.push(textureBuffer);
+	indexBuffersArray.push(indexBuffer);
+	indicesArray.push(objData.indices);
+	
+	initBuffers();
+	renderLoop();
 }

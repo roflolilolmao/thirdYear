@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="./css/stylesheet.css">
+    <script src="./js/commonFunctions.js"></script>
+    <script src="./js/gl-matrix-min.js"></script>
+    <script src="./js/webglTools.js"></script>
+    <script id="shader-vs" type="x-shader/x-vertex">attribute vec3 aVertexPosition;attribute vec2 aTextureCoord;uniform mat4 uMVMatrix;uniform mat4 uPMatrix;varying vec2 vTextureCoord;void main(void){vTextureCoord=aTextureCoord;gl_Position=uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);}</script>
+    <script id="shader-fs" type="x-shader/x-fragment">
+        #ifdef GL_ES
+		precision highp float;
+		#endif 
+		uniform sampler2D uColorTexture;varying vec2 vTextureCoord;void main(void){vec2 mapCoord=vec2(vTextureCoord.s, vTextureCoord.t);vec4 texelColor=texture2D(uColorTexture, mapCoord);if (texelColor.x==254.0/255.0 && texelColor.y==121.0/255.0 && texelColor.z==243.0/255.0){discard;}else{gl_FragColor=texelColor.rgba;}}</script>
+    <script>
+        var currentTexID = 1;
+        const maxTreeParts = 10;
+        var normalBuffer = null;
+        var vertexBuffer = null;
+        var indexBuffer = null;
+        var textCoordsBuffer = null;
+        var texColorTab = new Array();
+        var currentSeason = 'P';
+        var indices = [];
+        var vertices = [];
+        var textId = [];
+        var textCoords = [];
+        var mvMatrix = mat4.create();
+        var pMatrix = mat4.create();
+        var normalMatrix = mat4.create();
+        var rotObject = 0;
+        var objectInRotation = 0;
+        function initShaderParameters(prg) {
+            prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+            glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+            prg.textureCoordsAttribute = glContext.getAttribLocation(prg, "aTextureCoord");
+            glContext.enableVertexAttribArray(prg.textureCoordsAttribute);
+            prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
+            prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
+            prg.uColorTexture = glContext.getUniformLocation(prg, "uColorTexture");
+        }
+        function initBuffers() {
+            vertices = [0.6, -0.75, 0.2, -0.2, -0.75, 0.2, -0.2, -0.75, -0.6, 0.0, 1.25, 0.2, 0.0, -0.75, 0.2, 0.0, -0.75, -0.6, -0.2, 1.25, 0.0, -0.2, -0.75, 0.0, 0.6, -0.75, 0.0, 1.2, 0.5, 0.3, -0.4, 0.5, 0.3, -0.4, -0.5, -1.5, 1.2, 0.0, 0.3, -0.4, 0.0, 0.3, -0.4, 1.0, -1.5, 0.75, 1.0, 0.5, -0.25, 0.0, 0.5, -0.25, 0.0, -2.1, 0.75, -0.5, 0.5, -0.25, 0.5, 0.5, -0.25, 0.5, -2.1, 0.625, 0.625, 0.375, -0.375, 0.625, 0.375, -0.375, 0.625, -0.925, -0.125, 1.375, 0.375, -0.125, 0.375, 0.375, -0.125, 0.375, -0.925, -0.375, 1.375, 0.075, -0.375, 0.375, 0.075, 0.625, 0.375, 0.075];
+            normals = [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0];
+            indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29];
+            textId = [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 10];
+            textCoords = [0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0];
+            normalBuffer = getArrayBufferWithArray(normals);
+            vertexBuffer = getArrayBufferWithArray(vertices);
+            indexBuffer = getIndexBufferWithIndices(indices);
+            textCoordsBuffer = getArrayBufferWithArray(textCoords);
+        }
+        function drawScene() {
+            glContext.clearColor(0.8, 0.8, 0.8, 1.0);
+            glContext.blendFunc(glContext.SRC_ALPHA, glContext.ONE_MINUS_SRC_ALPHA);
+            glContext.enable(glContext.BLEND);
+            glContext.enable(glContext.DEPTH_TEST);
+            glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+            glContext.viewport(0.0, 0.0, c_width, c_height);
+            mat4.perspective(pMatrix, degToRad(40), c_width / c_height, 0.1, 1000.0);
+            mat4.identity(mvMatrix);
+            mat4.translate(mvMatrix, mvMatrix, [0.0, 0.0, -3.0]);
+            mat4.rotate(mvMatrix, mvMatrix, rotObject, [0, 1, 0]);
+            if (objectInRotation === 1) rotObject += 0.02;
+            glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+            glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+            glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
+            glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
+            glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+            glContext.activeTexture(glContext.TEXTURE0);
+            glContext.uniform1i(prg.uColorTexture, 0);
+            for (var i = 0; i < 10; i++) {
+                glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[currentSeason][i]);
+                glContext.drawElements(glContext.TRIANGLE_STRIP, 3, glContext.UNSIGNED_SHORT, i * 6);
+            }
+        }
+        function initWebGL() {
+            glContext = getGLContext('webgl-canvas');
+            initProgram();
+            initBuffers();
+            var seasons = ['P', 'E', 'A', 'H'];
+            for (var season = 0; season < 4; ++season) {
+                texColorTab[seasons[season]] = new Array();
+                for (var index = 1; index <= maxTreeParts; ++index) {
+                    var fileName = "fig/tree/" + seasons[season] + "/tree";
+                    if (index < 10) fileName += "0";
+                    fileName += index;
+                    initTextureWithImage(fileName + ".png", texColorTab[seasons[season]]);
+                }
+            }
+            renderLoop();
+        }
+    </script>
+    <script>
+        function WriteIDs() {
+            document.getElementById("spanIDs").innerHTML = "TextureID: " + currentTexID;
+        }
+        function changeTexture() {
+            if (currentTexID < maxTreeParts) ++currentTexID;
+            else currentTexID = 1;
+            WriteIDs();
+        }
+        function changeNormal() {
+            if (currentNormalID < maxTreeParts) ++currentNormalID;
+            else currentNormalID = 1;
+            WriteIDs();
+        }
+        function changeSpec() {
+            if (currentSpecID < maxTreeParts) ++currentSpecID;
+            else currentSpecID = 1;
+            WriteIDs();
+        }
+        function animateObject() {
+            if (document.getElementById("animateCheckBox1").checked) {
+                objectInRotation = 1;
+            } else {
+                objectInRotation = 0;
+            }
+        }
+        function animateTexture() {
+            if (document.getElementById("animateCheckBox2").checked) {
+                textureInTranslation = 1;
+            } else {
+                textureInTranslation = 0;
+            }
+            if (document.getElementById("animateCheckBox3").checked) textureInTranslation += 2;
+        }
+        function changeSeason() {
+            currentSeason = document.getElementById("season").value;
+        }
+    </script>
+</head>
+<body onload="initWebGL()">
+    <script>
+        displayTitle("Ch.08 Ex.08 : Arbre en billboard", 1, 1, 1, 1, 1, 1, 1);
+    </script>
+    <p>L'arbre ci-dessous n'utilise que 10 triangles pour être rendu.</p>
+    <p>
+        <input id="animateCheckBox1" type="checkbox" onchange="animateObject()">Rotation de l'arbre</input>
+        <br/>Saison :
+        <select id="season" onchange="changeSeason()">
+            <option value="P">Printemps</option>
+            <option value="E">Eté</option>
+            <option value="A">Automne</option>
+            <option value="H">Hiver</option>
+        </select>
+    </p>
+    <canvas id="webgl-canvas" width="500" height="500">HTML5 is not supported</canvas>
+</body>
+</html>
