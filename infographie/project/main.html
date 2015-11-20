@@ -1,87 +1,145 @@
 <!DOCTYPE html>
 <html lang="fr">
-	<head>
-		<meta charset="utf-8" />
-		<!--<link rel="stylesheet" href="css/stylesheet.css">-->
-		<script src="../js/commonFunctions.js"></script>
-		<script src="../js/gl-matrix-min.js"></script>
-		<script src="../js/webglTools.js"></script>
-		<script src="../js/loadModel3D.js"></script>
-		<script src="../js/OBJ_loader.js"></script>
-		<script src="scene.js"></script>
-		<script src="planet.js"></script>
-		<script id="shader-vs" type="x-shader/x-vertex">
-			const vec3 lightpos = vec3(0.0, 0.0, 0.0);
-			attribute vec3 aVertexPosition;
-			attribute vec2 aTextureCoord;
-		    uniform mat4 uMVMatrix;
-		    uniform mat4 uPMatrix;
-			uniform vec3 center; // fixme
-			uniform float radius;
-			uniform int vmode; // fixme
-			varying vec3 vLightpos;
-			varying vec2 vTextureCoord;
-		    void main(void) {
-				gl_PointSize = 4.0;
-				vTextureCoord = aTextureCoord;
-				vec4 a = uPMatrix * vec4(aVertexPosition * radius, 1.0);
-				vec4 c = uPMatrix * uMVMatrix * vec4(center, 1.0);
-				vLightpos = (uPMatrix * uMVMatrix * vec4(lightpos, 1.0)).xyz;	
-				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition * radius + center, 1.0);
-			}
-		</script>
-		<script id="shader-fs" type="x-shader/x-fragment">
-			#ifdef GL_ES
-				precision highp float;
-			#endif
-			const float alpha = 8.0;
-			uniform int fmode; // fixme
-			uniform sampler2D uColorTexture;
-			uniform sampler2D uNormalTexture;
-			uniform sampler2D uSpecularTexture;
-			varying vec3 vLightpos;
-			varying vec2 vTextureCoord;
-			void main(void) {
-				vec2 mapCoord = vec2(vTextureCoord.s, vTextureCoord.t);
-				vec4 texelColor = texture2D(uColorTexture, mapCoord);
-				vec4 texelNormal = texture2D(uNormalTexture, mapCoord);
-				vec4 texelSpecular = texture2D(uSpecularTexture, mapCoord);
-				
-				vec3 finalColor;
-				vec3 L = normalize(vLightpos);
-				vec3 N = normalize(texelNormal.rgb);
-				float lambertTerm = dot(N, -L);
-				if(lambertTerm > -2.0)
-				{
-					/**/
-					vec3 uMaterialDiffuse = vec3(0.5, 0.5, 0.5);
-					vec3 uMaterialSpecular = vec3(0.5, 0.5, 0.5);
-					vec3 vEyeVec = vec3(0.0, 0.0, 1.0);
-					/**/
-					
-					vec3 finalColor = vec3(0.0,0.0,0.0);
-					// finalColor += uMaterialDiffuse * lambertTerm;
-					
-					vec3 E = normalize(vEyeVec);
-					vec3 R = reflect(L, N);
-					float specular = pow(max(dot(R, E), 0.0), alpha);
-					// finalColor += uMaterialSpecular * specular * texelSpecular.rgb;
-					gl_FragColor = vec4(finalColor + texelColor.rgb, 1.0);
-				}
-				else
-				{
-					gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-				}
-			}
-		</script>
-	</head>
-	<body onload="initWebGL()">
-		<button onclick="pauseBoolF()">Play/pause</button>
-		<button onclick="orbitBoolF()">Show/hide orbits</button>
-		<br/>
-		<canvas id="webgl-canvas" width="750" height="750">
-			HTML5 is not supported
-		</canvas>
-	</body>
-	<script src='../js/mouseMotionHandling.js'></script>
+    <head>
+        <meta charset="utf-8" />
+        <!--<link rel="stylesheet" href="css/stylesheet.css">-->
+        <script src="../js/commonFunctions.js"></script>
+        <script src="../js/gl-matrix-min.js"></script>
+        <script src="../js/webglTools.js"></script>
+        <script src="../js/loadModel3D.js"></script>
+        <script src="../js/OBJ_loader.js"></script>
+        <script src="scene.js"></script>
+        <script src="planet.js"></script>
+        <script id="shader-vs" type="x-shader/x-vertex">
+            const vec3 lightpos = vec3(0.0, 0.0, 0.0);
+            attribute vec3 aVertexPosition;
+            attribute vec2 aTextureCoord;
+            uniform mat4 uMVMatrix;
+            uniform mat4 uPMatrix;
+            uniform mat4 uNMatrix;
+            uniform vec3 center;
+            uniform float radius;
+            
+            // uniform float rotation; todo
+            uniform float inclination;
+            
+            varying vec3 vLightpos;
+            varying vec2 vTextureCoord;
+            varying vec4 vPosition;
+            varying vec4 vNormal;
+            
+            // source http://www.geeks3d.com/20141201/how-to-rotate-a-vertex-by-a-quaternion-in-glsl/
+            vec4 quat_from_axis_angle(vec3 axis, float angle)
+            { 
+              vec4 qr;
+              float half_angle = (angle * 0.5) * 3.14159 / 180.0;
+              qr.x = axis.x * sin(half_angle);
+              qr.y = axis.y * sin(half_angle);
+              qr.z = axis.z * sin(half_angle);
+              qr.w = cos(half_angle);
+              return qr;
+            }
+            vec4 quat_conj(vec4 q)
+            { 
+              return vec4(-q.x, -q.y, -q.z, q.w); 
+            }
+            vec4 quat_mult(vec4 q1, vec4 q2)
+            { 
+              vec4 qr;
+              qr.x = (q1.w * q2.x) + (q1.x * q2.w) + (q1.y * q2.z) - (q1.z * q2.y);
+              qr.y = (q1.w * q2.y) - (q1.x * q2.z) + (q1.y * q2.w) + (q1.z * q2.x);
+              qr.z = (q1.w * q2.z) + (q1.x * q2.y) - (q1.y * q2.x) + (q1.z * q2.w);
+              qr.w = (q1.w * q2.w) - (q1.x * q2.x) - (q1.y * q2.y) - (q1.z * q2.z);
+              return qr;
+            }
+            vec3 rotate_vertex_position(vec3 position, vec3 axis, float angle)
+            { 
+              vec4 qr = quat_from_axis_angle(axis, angle);
+              vec4 qr_conj = quat_conj(qr);
+              vec4 q_pos = vec4(position.x, position.y, position.z, 0);
+              
+              vec4 q_tmp = quat_mult(qr, q_pos);
+              qr = quat_mult(q_tmp, qr_conj);
+              
+              return vec3(qr.x, qr.y, qr.z);
+            }
+            void main(void)
+            {
+                vec3 position = rotate_vertex_position(aVertexPosition * radius, vec3(1.0, 0.0, 0.0), 90.0 - inclination);
+                vPosition = uMVMatrix * vec4(position + center, 1.0);
+                gl_Position = uPMatrix * vPosition;
+                vTextureCoord = aTextureCoord;
+                vNormal = uNMatrix * vec4(position, 1.0);
+                vLightpos = (uMVMatrix * vec4(lightpos, 1.0)).xyz;
+            }
+        </script>
+        <script id="shader-fs" type="x-shader/x-fragment">
+            #ifdef GL_ES
+                precision highp float;
+            #endif
+            const float alpha = 16.0;
+            const vec3 lightpos = vec3(0.0, 0.0, 0.0);
+            uniform sampler2D uColorTexture;
+            uniform sampler2D uNormalTexture;
+            uniform sampler2D uSpecularTexture;
+            uniform sampler2D uEarthNight;
+            uniform sampler2D uAtmosphere;
+            uniform sampler2D uAtmosphereNormals;
+            uniform vec3 center;
+            uniform float radius;
+            uniform int fmode;
+            varying vec3 vLightpos;
+            varying vec2 vTextureCoord;
+            varying vec4 vPosition;
+            varying vec4 vNormal;
+            void main(void) {
+                vec4 texelColor = texture2D(uColorTexture, vTextureCoord);
+                if(fmode == 1) // earth
+                {
+                    vec4 texelNormal = texture2D(uNormalTexture, vTextureCoord);
+                    vec4 texelSpecular = texture2D(uSpecularTexture, vTextureCoord);
+                    vec4 texelNight = texture2D(uEarthNight, vTextureCoord);
+                    
+                    vec3 finalColor;
+                    
+                    vec3 L = normalize(vLightpos - vPosition.xyz);
+                    
+                    vec3 N = normalize(vNormal.xyz);
+
+                    float lambertTerm = dot(N, L);
+                    finalColor += vec3(1.0, 1.0, 1.0) * max(lambertTerm, 0.0);
+                    
+                    vec3 E = normalize(-vPosition.xyz);
+                    vec3 R = reflect(-L, N);
+                    float specular = pow(max(dot(R, E), 0.0), alpha);
+                    finalColor += specular * texelSpecular.rgb;
+                    finalColor *= texelColor.xyz;
+                    vec3 nightColor = max(texelNight.xyz * (0.5 - lambertTerm), 0.0);
+                    finalColor += nightColor;
+                    gl_FragColor = vec4(finalColor, 1.0);
+                }
+                else
+                {
+                    gl_FragColor = vec4(texelColor.xyz, 1.0);  
+                }
+            }
+        </script>
+    </head>
+    <body onload="initWebGL()">
+        <canvas id="webgl-canvas" width="750" height="750">
+            HTML5 is not supported
+        </canvas>
+        <aside style="float:right; height:100%; padding-top:700px;">
+            <div>
+                <button onclick="pauseBoolF()">Play/pause</button>
+            </div>
+            <div>
+                <button onclick="orbitBoolF()">Show/hide orbits</button>
+            </div>
+            <div>
+                <input type="range" id="timeRange" value="1" min="1" max="1000" oninput="updateTimeFactor()"/>
+            </div>
+        </aside>
+    </body>
+    <script src='../js/mouseMotionHandling.js'></script>
 </html>

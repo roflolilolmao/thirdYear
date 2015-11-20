@@ -56,7 +56,8 @@
 			vec3 normal = (2.0 * texture2D(normalMap, vTextureCoord).rgb - 1.0);
 			vec3 N = normalize(tbn * normal);
 			float lambertTerm = dot(N,-L);
-			if(lambertTerm > 0.0){
+			if(lambertTerm > 0.0)
+			{
 				vec4 texel = texture2D(texture, vec2(vTextureCoord.s, vTextureCoord.t));
 				finalColor += texel.rgb * lambertTerm;	
 				vec3 E = normalize(vEyeVec);

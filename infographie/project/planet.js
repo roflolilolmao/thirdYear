@@ -3,12 +3,12 @@ var deltaT = 24 * 60 * 10;
 var ASTRONOMICAL_UNIT = 149597870700;
 var G = 6.67e-11;
 // var G = 1;
-var  VISUAL_FACTOR = 10;
+var VISUAL_FACTOR = 10;
 var MASS_FACTOR = 1e24 / ASTRONOMICAL_UNIT / ASTRONOMICAL_UNIT;
 var POSITION_FACTOR = 1e9 / ASTRONOMICAL_UNIT;
 var SPEED_FACTOR = 1 / ASTRONOMICAL_UNIT;
 
-function Planet(mass, speed, pos, radius, color, orbitFactor)
+function Planet(mass, speed, pos, radius, color, orbitFactor, inclination)
 {
 	this.radius = radius;
 	this.mass = mass;
@@ -16,10 +16,11 @@ function Planet(mass, speed, pos, radius, color, orbitFactor)
 	this.color = color;
 	this.pos = pos;
 	this.orbitFactor = orbitFactor;
+    this.inclination = inclination;
 }
 Planet.prototype.update = function(mainBody)
 {
-	newtonGravitation(mainBody, this);
+    newtonGravitation(mainBody, this);
 }
 Planet.prototype.draw = function(mainBodyPos)
 {
@@ -41,6 +42,11 @@ Planet.prototype.draw = function(mainBodyPos)
 	glContext.uniform1f(prg.radius, this.radius);
 	glContext.uniform3f(prg.center, c[0], c[1], 0.0);
 	glContext.uniform3f(prg.colorPlanet, this.color[0], this.color[1], this.color[2]);
+    
+    glContext.uniform1i(prg.fmode, 1);
+    glContext.uniform1f(prg.inclination, this.inclination);
+    if(this.mass == sol.mass)
+        glContext.uniform1i(prg.fmode, 0);
 	
 	glContext.drawElements(glContext.TRIANGLES, indicesArray[0].length, glContext.UNSIGNED_SHORT,0);
 

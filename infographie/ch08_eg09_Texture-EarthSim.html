@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+		    attribute vec3 aVertexNormal;
+			attribute vec3 aVertexPosition;
+			attribute vec2 aTextureCoord;
+			attribute vec3 aTangent;
+			uniform mat4 uNMatrix;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			uniform vec3 uLightPosition;
+			varying vec2 vTextureCoord;
+			varying vec3 vNormal;
+			varying vec3 vLightRay;
+			varying vec3 vEyeVec;
+			varying mat3 tbn;
+			void main(void) {
+				vTextureCoord = aTextureCoord;
+				vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);
+				vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
+			    vec4 vTangent = normalize( uNMatrix * vec4(aTangent, 1.0) );
+			    vec3 vBitangent = normalize(cross( vNormal, vTangent.xyz ));
+			    tbn = mat3(vTangent, vBitangent, vNormal);
+				vLightRay = vertex.xyz - uLightPosition;
+				vEyeVec = -vec3(vertex.xyz);
+				gl_Position = uPMatrix * vertex;
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+			precision highp float;
+			#endif
+			uniform float uShininess;
+			uniform float lightIntensity;
+			uniform vec3 uLightAmbient;
+			uniform vec3 uMaterialDiffuse;
+			uniform vec3 uMaterialSpecular;
+			uniform bool usingColorMap;
+			uniform bool usingNormalMap;
+			uniform bool usingSpecularMap;
+			uniform sampler2D uColorTexture;
+			uniform sampler2D uNormalMap;
+			uniform sampler2D uSpecularMap;
+			varying vec2 vTextureCoord;
+			varying vec3 vNormal;
+			varying vec3 vLightRay;
+			varying vec3 vEyeVec;
+			varying mat3 tbn;
+			void main(void) {
+				float squaredDistanceToLight = vLightRay.x*vLightRay.x+vLightRay.y*vLightRay.y+vLightRay.z*vLightRay.z;
+				vec3 L = normalize(vLightRay);
+				vec2 mapCoord = vec2(vTextureCoord.s, vTextureCoord.t);
+				vec3 baseColor = vec3(1.0, 1.0, 1.0);
+				vec3 normalVector = vNormal;
+				vec3 specVector = vec3( 0.0, 0.0, 0.0 );
+				vec3 finalColor = uLightAmbient;
+				if( usingColorMap ) baseColor = vec3(texture2D(uColorTexture, mapCoord));
+				else baseColor = vec3(0.5, 0.5, 0.5);
+				if( usingNormalMap ){
+					normalVector = normalize(vec3(2.0*texture2D(uNormalMap, mapCoord).rgb - 1.0));
+					normalVector = tbn * normalVector;
+				}
+				if( usingSpecularMap ) specVector = vec3(texture2D(uSpecularMap, mapCoord));
+				if( usingNormalMap || usingSpecularMap ){
+					vec3 N = normalize(normalVector);
+					float lambertTerm = dot(N,-L);
+					float specular = 0.0;
+					if(lambertTerm > 0.0){
+						finalColor +=  uMaterialDiffuse * lambertTerm;
+						vec3 E = normalize(vEyeVec);
+						vec3 R = reflect(L, N);
+						specular = pow( max(dot(R, E), 0.0), uShininess);
+						finalColor += specVector * uMaterialSpecular * specular;
+					}
+				}
+				finalColor *= baseColor.xyz * lightIntensity / squaredDistanceToLight;
+				gl_FragColor = vec4(finalColor, 1.0);
+			}
+		</script>
+		<script>
+			var planetName = ["Mercury","Venus","Earth","Mars","TestPlanet"];
+			const maxSample = planetName.length;
+			var renderingMode   = true;
+			var sphereDivisions = 4;
+			var currentMapID    = 1;
+			const M_PI  = 3.1415926535897932384626433832795;
+			const M_2PI = 2.0*M_PI;
+			var normalBuffer = null;
+			var vertexBuffer = null;
+			var indexBuffer  = null;
+			var texCoordsBuffer = null;
+			var tangentsBuffer = null;
+			var texColorTab = new Array();
+			var texNormalTab = new Array();
+			var texSpecTab  = new Array();
+			var indices    = [];
+			var vertices   = [];
+			var texCoords = [];
+			var normals = [];
+			var tangents = [];
+			var mvMatrix = mat4.create();
+			var pMatrix  = mat4.create();
+			var nMatrix  = mat4.create();
+			var rotLight = 0;
+			var lightRotRadius = 2.0
+			var currentLightIntensity = 10.0;
+			var objectInRotation = 1;
+			var quadAngle = 45;
+			var currentDistanceToPlanet = 2.5;
+			function initShaderParameters(prg){
+				prg.vertexNormalAttribute   = glContext.getAttribLocation(prg, "aVertexNormal");
+				glContext.enableVertexAttribArray(prg.vertexNormalAttribute);
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				prg.textureCoordsAttribute  = glContext.getAttribLocation(prg, "aTextureCoord");
+				glContext.enableVertexAttribArray(prg.textureCoordsAttribute);
+				prg.tangentsAttribute  = glContext.getAttribLocation(prg, "aTangent");
+				glContext.enableVertexAttribArray(prg.tangentsAttribute);
+				prg.pMatrixUniform          = glContext.getUniformLocation(prg, 'uPMatrix');
+				prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
+				prg.nMatrixUniform	        = glContext.getUniformLocation(prg, "uNMatrix");
+			    prg.lightPositionUniform    = glContext.getUniformLocation(prg, 'uLightPosition');
+			    prg.shininessUniform        = glContext.getUniformLocation(prg, 'uShininess');
+			    prg.lightIntensityUniform   = glContext.getUniformLocation(prg, 'lightIntensity');
+			    prg.ambUniform     = glContext.getUniformLocation(prg, 'uLightAmbient');
+			    prg.difUniform  = glContext.getUniformLocation(prg, 'uMaterialDiffuse');
+			    prg.specUniform = glContext.getUniformLocation(prg, 'uMaterialSpecular');
+				prg.usingColorMapUniform    = glContext.getUniformLocation(prg, 'usingColorMap');
+				prg.usingNormalMapUniform   = glContext.getUniformLocation(prg, 'usingNormalMap');
+				prg.usingSpecularMapUniform = glContext.getUniformLocation(prg, 'usingSpecularMap');
+				prg.uColorTexture 			= glContext.getUniformLocation(prg, "uColorTexture");
+				prg.uNormalMap   			= glContext.getUniformLocation(prg, "uNormalMap");
+				prg.uSpecularMap   			= glContext.getUniformLocation(prg, "uSpecularMap");
+			}
+			function Normalize(v){
+			  var d = Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+			  if (d!=0.0){
+				  v[0]/=d;
+				  v[1]/=d;
+				  v[2]/=d;
+			  }
+			  return v;
+			}
+			function setTexCoordFrom3DPoint(x,y,z){
+				var uTex = 1.0 - (0.5 + Math.atan2(z,x) / M_2PI);
+				var vTex = 0.5 + Math.asin(y) / M_PI;
+				texCoords.push( uTex, vTex );
+				if( (uTex<0.0)||(uTex>1.0)||(vTex<0.0)||(vTex>1.0) )
+					console.log("/!\P("+x+","+y+","+z+") => uv("+uTex+","+vTex+")");
+			}
+			function fromOneToFourTriangles(v1, v2, v3, depth){
+				var v12 = [];   var v23 = [];   var v31 = [];   var i;
+				if (depth == 0) {
+					vertices.push( v1[0], v1[1], v1[2] );
+					setTexCoordFrom3DPoint(v1[0], v1[1], v1[2]);
+					normals.push( 0.0, 0.0, 1.0 );
+					tangents.push( 1.0, 0.0, 0.0 );
+					vertices.push( v2[0], v2[1], v2[2] );
+					setTexCoordFrom3DPoint(v2[0], v2[1], v2[2]);
+					normals.push( 0.0, 0.0, 1.0 );
+					tangents.push( 1.0, 0.0, 0.0 );
+					vertices.push( v3[0], v3[1], v3[2] );
+					setTexCoordFrom3DPoint(v3[0], v3[1], v3[2]);
+					normals.push( 0.0, 0.0, 1.0 );
+					tangents.push( 1.0, 0.0, 0.0 );
+					indices.push( indexCnt, indexCnt+1, indexCnt+1, indexCnt+2, indexCnt+2, indexCnt );
+					indexCnt += 3;
+				}else{
+					for (i = 0; i < 3; i++) {
+						v12.push( (v1[i]+v2[i])/2.0 );
+						v23.push( (v2[i]+v3[i])/2.0 );
+						v31.push( (v3[i]+v1[i])/2.0 );
+					}
+					v12 = Normalize(v12);
+					v23 = Normalize(v23);
+					v31 = Normalize(v31);
+					fromOneToFourTriangles(  v1, v12, v31, depth-1);
+					fromOneToFourTriangles(  v2, v23, v12, depth-1);
+					fromOneToFourTriangles(  v3, v31, v23, depth-1);
+					fromOneToFourTriangles( v12, v23, v31, depth-1);
+				}
+			}
+			function initBuffers(){
+				indices = [];
+				vertices = [];
+				normals = [];
+				tangents = [];
+				indexCnt = 0;
+				var X = 0.525731112119133696;
+				var Z = 0.850650808352039932;
+				var icosahedronvertex = [];
+				icosahedronvertex.push(-X, 0.0, Z);
+				icosahedronvertex.push(X, 0.0, Z);
+				icosahedronvertex.push(-X, 0.0, -Z);
+				icosahedronvertex.push(X, 0.0, -Z);
+				icosahedronvertex.push(0.0, Z, X);
+				icosahedronvertex.push(0.0, Z, -X);
+				icosahedronvertex.push(0.0, -Z, X);
+				icosahedronvertex.push(0.0, -Z, -X);
+				icosahedronvertex.push(Z, X, 0.0);
+				icosahedronvertex.push(-Z, X, 0.0);
+				icosahedronvertex.push(Z, -X, 0.0);
+				icosahedronvertex.push(-Z, -X, 0.0);
+				var icosahedrontriangle = [];
+				icosahedrontriangle.push(1,4,0);
+				icosahedrontriangle.push(4,9,0);
+				icosahedrontriangle.push(4,5,9);
+				icosahedrontriangle.push(8,5,4);
+				icosahedrontriangle.push(1,8,4);
+				icosahedrontriangle.push(1,10,8);
+				icosahedrontriangle.push(10,3,8);
+				icosahedrontriangle.push(8,3,5);
+				icosahedrontriangle.push(3,2,5);
+				icosahedrontriangle.push(3,7,2);
+				icosahedrontriangle.push(3,10,7);
+				icosahedrontriangle.push(10,6,7);
+				icosahedrontriangle.push(6,11,7);
+				icosahedrontriangle.push(6,0,11);
+				icosahedrontriangle.push(6,1,0);
+				icosahedrontriangle.push(10,1,6);
+				icosahedrontriangle.push(11,0,9);
+				icosahedrontriangle.push(2,11,9);
+				icosahedrontriangle.push(5,2,9);
+				icosahedrontriangle.push(11,2,7);
+				for (i = 0; i < icosahedrontriangle.length; i+=3){
+					var v1 = [];
+					var v2 = [];
+					var v3 = [];
+					var vertexIndexStart = icosahedrontriangle[i] * 3;
+					v1.push(icosahedronvertex[vertexIndexStart],
+							icosahedronvertex[vertexIndexStart + 1],
+							icosahedronvertex[vertexIndexStart + 2]);
+					vertexIndexStart = icosahedrontriangle[i+1] * 3;
+					v2.push(icosahedronvertex[vertexIndexStart],
+							icosahedronvertex[vertexIndexStart + 1],
+							icosahedronvertex[vertexIndexStart + 2]);
+					vertexIndexStart = icosahedrontriangle[i+2] * 3;
+					v3.push(icosahedronvertex[vertexIndexStart],
+							icosahedronvertex[vertexIndexStart + 1],
+							icosahedronvertex[vertexIndexStart + 2]);
+				    fromOneToFourTriangles(v1, v2, v3, sphereDivisions);
+				}
+				console.log("Vertices: "+vertices.length +" | Normals: "+normals.length +" | Indices: "+indices.length +" | texCoords: "+texCoords.length );
+				normalBuffer     = getArrayBufferWithArray(normals);
+				vertexBuffer     = getArrayBufferWithArray(vertices);
+				indexBuffer      = getIndexBufferWithIndices(indices);
+				texCoordsBuffer  = getArrayBufferWithArray(texCoords);
+				tangentsBuffer   = getArrayBufferWithArray(tangents);
+			}
+			function initMaterialProperties(){
+				glContext.uniform3f(prg.ambUniform, 1.0, 1.0, 1.0);
+				glContext.uniform3f(prg.difUniform, 1.0, 1.0, 1.0);
+				glContext.uniform3f(prg.specUniform, 1.0, 1.0, 1.0);
+				glContext.uniform1f(prg.shininessUniform, 1.0);
+			}
+			function setLightPositionAndIntensity()
+			{
+				if( document.getElementById("animateCheckBox").checked )
+				{
+					rotLight += 0.02;
+					if( rotLight>M_2PI) rotLight = -M_2PI;
+				}
+				glContext.uniform3f(prg.lightPositionUniform, lightRotRadius*Math.cos(rotLight), 1.0, lightRotRadius*Math.sin(rotLight));
+				glContext.uniform1f(prg.lightIntensityUniform, currentLightIntensity );
+			}
+			function drawScene(){
+				glContext.clearColor(0.0, 0.0, 0.0, 1.0);
+				glContext.enable(glContext.DEPTH_TEST);
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				glContext.viewport( 0.0, 0.0, c_width, c_height);
+				mat4.perspective(pMatrix, degToRad(60), c_width / c_height, 0.1, 1000.0);
+				mat4.identity(mvMatrix);
+				mat4.translate(mvMatrix, mvMatrix, [0.0, 0.0, -currentDistanceToPlanet]);
+				mat4.rotate(mvMatrix, mvMatrix, -quadAngle*3.14/180.0, [0,1,0]);
+				setLightPositionAndIntensity();
+				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
+			    mat4.copy(nMatrix, mvMatrix);
+			    mat4.invert(nMatrix, nMatrix);
+			    mat4.transpose(nMatrix, nMatrix);
+			    glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);
+				glContext.uniform1i(prg.usingColorMapUniform, document.getElementById( "useColorMapCheckBox" ).checked);
+				glContext.uniform1i(prg.usingNormalMapUniform, document.getElementById( "useNormalMapCheckBox" ).checked);
+				glContext.uniform1i(prg.usingSpecularMapUniform, document.getElementById( "useSpecularMapCheckBox" ).checked);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, normalBuffer);
+				glContext.vertexAttribPointer(prg.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, texCoordsBuffer);
+				glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, tangentsBuffer);
+				glContext.vertexAttribPointer(prg.tangentsAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.activeTexture(glContext.TEXTURE0);
+				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[currentMapID-1]);
+				glContext.uniform1i(prg.uColorTexture, 0);
+				glContext.activeTexture(glContext.TEXTURE1);
+				glContext.bindTexture(glContext.TEXTURE_2D, texNormalTab[currentMapID-1]);
+				glContext.uniform1i(prg.uNormalMap, 1);
+				glContext.activeTexture(glContext.TEXTURE2);
+				glContext.bindTexture(glContext.TEXTURE_2D, texSpecTab[currentMapID-1]);
+				glContext.uniform1i(prg.uSpecularMap, 2);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+				if(renderingMode)
+					glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+				else
+					glContext.drawElements(glContext.LINES, indices.length, glContext.UNSIGNED_SHORT,0);
+			}
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				initProgram();
+				initBuffers();
+				initMaterialProperties();
+				for( var index=1; index<=maxSample; ++index ) {
+					var fileName = "fig/Earth/planet"+planetName[index-1];
+					fileName += "_";
+					initTextureWithImage(fileName+"colorMap.jpg", texColorTab);
+					initTextureWithImage(fileName+"normalMap.jpg", texNormalTab);
+					initTextureWithImage(fileName+"specularMap.jpg", texSpecTab);
+					console.log("Loading: "+fileName+"(textures)");
+				}
+				renderLoop();
+			}
+		</script>
+		<script>
+			function changeMaps(){
+				if( currentMapID < maxSample )
+				  ++currentMapID;
+				else currentMapID = 1;
+				document.getElementById("spanID").innerHTML = "<button id='changeMaps' onclick='changeMaps()'>Changer de planète (current is: " + planetName[currentMapID-1] + ")</button>";
+			}
+			function changeTheMapUse( checkboxID, buttonID ){
+				console.log( checkboxID +" - "+ buttonID);
+				if( document.getElementById( checkboxID ).checked ) document.getElementById( buttonID ).disabled = false;
+				else document.getElementById( buttonID ).disabled = true;
+			}
+			function sliderRotLightRadiusChanged(){
+				lightRotRadius = document.getElementById("rotLightRadiusSlider").value/10.0;
+			}
+			function sliderQuadAngleChanged(){
+				quadAngle = document.getElementById("quadAngleSlider").value;
+			}
+			function sliderLightIntensityChanged(){
+				currentLightIntensity = document.getElementById("lightIntensitySlider").value;
+			}
+			function sliderDistChanged(){
+				currentDistanceToPlanet = document.getElementById("quadDistSlider").value;
+			}
+			function renderingModeChanged(){
+				renderingMode = document.getElementById("wireframeRendering").checked;
+				console.log(renderingMode);
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<script>displayTitle("Ch.08 E.g.9 : Simulation de planètes", 1,1,1,1,1,1,1);</script>
+		<p>Cet exemple illustre les effets de la manipulation de textures (color, normal, specular maps) sur un icosaèdre haute résolution".</p>
+        <p>
+			<input id="useColorMapCheckBox" type="checkbox" checked=true onchange="changeTheMapUse( 'useColorMapCheckBox', 'colorMapButton' )">ColorMap</input>
+			<input id="useNormalMapCheckBox" type="checkbox" checked=true onchange="changeTheMapUse( 'useNormalMapCheckBox', 'normalMapButton' )">NormalMap</input>
+			<input id="useSpecularMapCheckBox" type="checkbox" checked=true onchange="changeTheMapUse( 'useSpecularMapCheckBox', 'specularMapButton' )">SpecularMap</input>
+			<br />
+			<span id="spanID"><button id="changeMaps" onclick="changeMaps()">Changer de planète</button></span>
+			<input id="wireframeRendering" type="checkbox" checked=true onclick="renderingModeChanged()">Triangles pleins</input>
+		</p>
+		<input id="animateCheckBox" type="checkbox" checked=true onchange="animateObject()">Rotation de la source de lumière</input> de rayon : 0.1<input type="range" id="rotLightRadiusSlider" value="20" min="1" max="200" onChange="sliderRotLightRadiusChanged();">20.0<br />
+		Intensité de la lumière : 1.0<input type="range" id="lightIntensitySlider" value="50" min="1" max="100" onChange="sliderLightIntensityChanged();">100.0<br />
+		Rotation sur (Y) : 0°<input type="range" id="quadAngleSlider" value="180" min="0" max="360" onChange="sliderQuadAngleChanged();">360°<br />
+		Distance à la planète : 1.5<input type="range" id="quadDistSlider" value="3" min="1.5" max="10.0" step="0.1" onChange="sliderDistChanged();">5<br />
+		<!-- WebGL canvas -->
+		<canvas id="webgl-canvas" width="1000" height="600">
+			HTML5 is not supported
+		</canvas>
+	</body>
+	<script src='./js/mouseMotionHandling.js'></script>
+</html>

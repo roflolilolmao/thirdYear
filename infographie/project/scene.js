@@ -15,7 +15,8 @@ var solarSystem;
 
 var pause = true;
 var orbitBool = false;
-var translateZ = -2.0;
+var translateZ = -0.12;
+var timeFactor = 1;
 
 var vertexBuffer = null;
 var indexBuffer = null;
@@ -35,6 +36,7 @@ var texColorTab = new Array();
 
 var mvMatrix = mat4.create();
 var pMatrix = mat4.create();
+var nMatrix = mat4.create();
 mat4.identity(mvMatrix);
 mat4.identity(pMatrix);
 window.onkeydown = function(e) {
@@ -45,7 +47,7 @@ window.onkeydown = function(e) {
 			break;
 		case 83:
 			//s
-			translateZ -= 0.1;
+			translateZ -= 0.01;
 			break;
 		default:
 	}
@@ -59,13 +61,17 @@ function initShaderParameters(prg)
 	prg.colorTextureUniform 	= glContext.getUniformLocation(prg, "uColorTexture");
 	prg.normalTextureUniform 	= glContext.getUniformLocation(prg, "uNormalTexture");
 	prg.specularTextureUniform 	= glContext.getUniformLocation(prg, "uSpecularTexture");
+	prg.earthNight           	= glContext.getUniformLocation(prg, "uEarthNight");
+	prg.atmosphere           	= glContext.getUniformLocation(prg, "uAtmosphere");
+	prg.atmosphereNormals    	= glContext.getUniformLocation(prg, "uAtmosphereNormals");
 	prg.pMatrixUniform 			= glContext.getUniformLocation(prg, 'uPMatrix');
 	prg.mvMatrixUniform 		= glContext.getUniformLocation(prg, 'uMVMatrix');
-	prg.fmode 					= glContext.getUniformLocation(prg, 'fmode');
-	prg.vmode 					= glContext.getUniformLocation(prg, 'vmode');
+	prg.nMatrixUniform 			= glContext.getUniformLocation(prg, 'uNMatrix');
 	prg.radius 					= glContext.getUniformLocation(prg, 'radius');
 	prg.center 					= glContext.getUniformLocation(prg, 'center');
 	prg.colorPlanet 			= glContext.getUniformLocation(prg, 'uColor');
+    prg.fmode = glContext.getUniformLocation(prg, 'fmode');
+    prg.inclination = glContext.getUniformLocation(prg, 'inclination');
 }
 function initBuffers()
 {
@@ -88,22 +94,32 @@ function initBuffers()
 	glContext.activeTexture(glContext.TEXTURE2);
 	glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[2]);
 	glContext.uniform1i(prg.specularTextureUniform, 2);
+	glContext.activeTexture(glContext.TEXTURE3);
+	glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[3]);
+	glContext.uniform1i(prg.earthNight, 3);
+	glContext.activeTexture(glContext.TEXTURE4);
+	glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[4]);
+	glContext.uniform1i(prg.atmosphere, 4);
+	glContext.activeTexture(glContext.TEXTURE5);
+	glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[5]);
+	glContext.uniform1i(prg.atmosphereNormals, 5);
+	glContext.activeTexture(glContext.TEXTURE6);
 	// indices
 	glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffersArray[0]);
 }
 function initScene()
 {
-	sol = createPlanet(1988500, 0, 0, 0.02, [1, 1, 1], 0);
-	mercury = createPlanet(0.3301, 38.86, 69.82, 0.01, [0.5, 0.3, 0.2], 10);
-	venus = createPlanet(4.8676, 34.79, 108.94, 0.015, [0.9, 0.9, 0.7], 20);
-	earth = createPlanet(5.9726, 29.29, 152.10, 0.02, [0.3, 0.5, 1.0], 30);
-	moon = createPlanet(0.07342, 0.964, 0.4055, 0.01, [0.8, 0.8, 0.8], 5);
+	sol = createPlanet(1988500, 0, 0, 0.02, [1, 1, 1], 0, 7.25);
+	mercury = createPlanet(0.3301, 38.86, 69.82, 0.01, [0.5, 0.3, 0.2], 10, 0.034);
+	venus = createPlanet(4.8676, 34.79, 108.94, 0.015, [0.9, 0.9, 0.7], 20, 177.36);
+	earth = createPlanet(5.9726, 29.29, 152.10, 0.02, [0.3, 0.5, 1.0], 30, 23.44);
+	moon = createPlanet(0.07342, 0.964, 0.4055, 0.01, [0.8, 0.8, 0.8], 5, 6.68);
 	
-	mars = createPlanet(0.64174, 21.97, 249.23, 0.01, [1.0, 0.0, 0.0], 40);
-	jupiter = createPlanet(1898.3, 12.44, 816.62, 0.08, [1.0, 0.5, 0.0], 80);
-	saturn = createPlanet(568.36, 9.09, 1514.50, 0.06, [1.0, 1.0, 0.7], 200);
-	uranus = createPlanet(86.816, 6.49, 3003.62, 0.05, [0.0, 1.0, 1.0], 550);
-	neptune = createPlanet(102.42, 5.37, 4545.67, 0.05, [0.0, 0.0, 1.0], 1100);
+	mars = createPlanet(0.64174, 21.97, 249.23, 0.01, [1.0, 0.0, 0.0], 40, 25.19);
+	jupiter = createPlanet(1898.3, 12.44, 816.62, 0.08, [1.0, 0.5, 0.0], 80, 3.13);
+	saturn = createPlanet(568.36, 9.09, 1514.50, 0.06, [1.0, 1.0, 0.7], 200, 26.73);
+	uranus = createPlanet(86.816, 6.49, 3003.62, 0.05, [0.0, 1.0, 1.0], 550, 82.23);
+	neptune = createPlanet(102.42, 5.37, 4545.67, 0.05, [0.0, 0.0, 1.0], 1100, 1.76917);
 	
 	earthSystem = new System(earth, [moon], sol);
 	planets = [mercury, venus, earthSystem, mars, jupiter, saturn, uranus, neptune];
@@ -123,8 +139,6 @@ function initScene()
 function drawSystem()
 {
 	solarSystem.draw();
-	glContext.uniform1i(prg.fmode, 0);
-	glContext.uniform1i(prg.vmode, 0);
 	if(orbitBool)solarSystem.drawOrbit();
 }
 function drawScene()
@@ -139,15 +153,25 @@ function drawScene()
 	translationMat = mat4.create();
 	mat4.identity(translationMat);
 	mat4.translate(translationMat, translationMat, [0.0, 0.0, translateZ]);
+	mat4.translate(translationMat, translationMat, [earthSystem.pos[0] / VISUAL_FACTOR, earthSystem.pos[1] / VISUAL_FACTOR, earthSystem.pos[2] / VISUAL_FACTOR]);
 	
 	rotateModelViewMatrixUsingQuaternion();
 	glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
 	mvtMatrix = mat4.create();
-	glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mat4.multiply(mvtMatrix, translationMat, mvMatrix));
+	mat4.multiply(mvtMatrix, translationMat, mvMatrix);
+	glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvtMatrix);
+	mat4.copy(nMatrix, mvtMatrix);
+	mat4.invert(nMatrix, nMatrix);
+	mat4.transpose(nMatrix, nMatrix);
+	glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);
 	rotX = 0;
 	rotY = 0;
 	
-	if (!pause) solarSystem.update();
+	if (!pause)
+    {
+        for(var i = 0; i < timeFactor; i++)
+            solarSystem.update();
+    }
 	if(indicesArray.length > 0)
 	{
 		drawSystem();
@@ -158,9 +182,12 @@ function initWebGL()
 	glContext = getGLContext('webgl-canvas');
 	initProgram();
 	loadModel("ressources/earth.obj");
-	initTextureWithImage( "ressources/texMap4k_Earth_main.jpg", texColorTab );
-	initTextureWithImage( "ressources/texMap4k_Earth_normal.jpg", texColorTab );
-	initTextureWithImage( "ressources/planetEarth_specularMap.jpg", texColorTab );
+	initTextureWithImage("ressources/texMap4k_Earth_main.jpg", texColorTab);
+	initTextureWithImage("ressources/texMap4k_Earth_normal.jpg", texColorTab);
+	initTextureWithImage("ressources/planetEarth_specularMap.jpg", texColorTab);
+	initTextureWithImage("ressources/texMap4k_Earth_night.jpg", texColorTab);
+	initTextureWithImage("ressources/texMap4k_Earth_atmosphere.jpg", texColorTab);
+	initTextureWithImage("ressources/texMap4k_Earth_atmosphere_normal.jpg", texColorTab);
 	initScene();
 }
 function pauseBoolF()
@@ -171,11 +198,17 @@ function orbitBoolF()
 {
 	orbitBool = !orbitBool;
 }
-
+function updateTimeFactor()
+{
+    timeFactor = document.getElementById("timeRange").value;
+}
 function handleOBJModel(filename, data){
 	console.info(filename + ' has been retrieved from the server');
 	
 	var objData = new OBJ.Mesh(data);
+	
+	
+	// pushpush
 	vertexBuffer = getVertexBufferWithVertices(objData.vertices);
 	normalsBuffer = getVertexBufferWithVertices(objData.vertexNormals);
 	textureBuffer = getVertexBufferWithVertices(objData.textures);
@@ -186,7 +219,7 @@ function handleOBJModel(filename, data){
 	textureBuffersArray.push(textureBuffer);
 	indexBuffersArray.push(indexBuffer);
 	indicesArray.push(objData.indices);
-	
+		
 	initBuffers();
 	renderLoop();
 }

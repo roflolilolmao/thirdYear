@@ -8,8 +8,8 @@ crypto 9 décembre
 
 <!-- devoirs -->
 crypto 25.11
-netbeans tasks
 tp2 os
+tp4 compilo
 <!-- projects -->
 <p3>
 wiki!
@@ -20,3 +20,5 @@ camera support
 wtf
 <webdev>
 holyshit
+<JEE>
+CDC
