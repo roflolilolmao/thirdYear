@@ -153,7 +153,7 @@ function drawScene()
 	translationMat = mat4.create();
 	mat4.identity(translationMat);
 	mat4.translate(translationMat, translationMat, [0.0, 0.0, translateZ]);
-	mat4.translate(translationMat, translationMat, [earthSystem.pos[0] / VISUAL_FACTOR, earthSystem.pos[1] / VISUAL_FACTOR, earthSystem.pos[2] / VISUAL_FACTOR]);
+	// mat4.translate(translationMat, translationMat, [earthSystem.pos[0] / VISUAL_FACTOR, earthSystem.pos[1] / VISUAL_FACTOR, earthSystem.pos[2] / VISUAL_FACTOR]);
 	
 	rotateModelViewMatrixUsingQuaternion();
 	glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
