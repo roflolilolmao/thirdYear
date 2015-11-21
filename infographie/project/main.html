@@ -2,7 +2,7 @@
 <html lang="fr">
     <head>
         <meta charset="utf-8" />
-        <!--<link rel="stylesheet" href="css/stylesheet.css">-->
+        <link rel="stylesheet" href="main.css">
         <script src="../js/commonFunctions.js"></script>
         <script src="../js/gl-matrix-min.js"></script>
         <script src="../js/webglTools.js"></script>
@@ -148,7 +148,7 @@
         </script>
     </head>
     <body onload="initWebGL()">
-        <canvas id="webgl-canvas" width="750" height="750">
+        <canvas id="webgl-canvas" width="1000" height="1000">
             HTML5 is not supported
         </canvas>
         <aside style="float:right; height:100%; padding-top:700px;">
@@ -160,6 +160,12 @@
             </div>
             <div>
                 <input type="range" id="timeRange" value="1" min="1" max="1000" oninput="updateTimeFactor()"/>
+            </div>
+            <div>
+                <input type="range" id="visualRange" value="10" min="1" max="15" oninput="updateVisualFactor()"/>
+            </div>
+            <div>
+                <input type="range" id="distanceRange" value="10" min="1" max="15" oninput="updateDistanceFactor()"/>
             </div>
         </aside>
     </body>

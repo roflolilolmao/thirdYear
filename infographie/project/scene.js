@@ -15,7 +15,7 @@ var solarSystem;
 
 var pause = true;
 var orbitBool = false;
-var translateZ = -0.12;
+var translateZ = -10.12;
 var timeFactor = 1;
 
 var vertexBuffer = null;
@@ -41,14 +41,15 @@ mat4.identity(mvMatrix);
 mat4.identity(pMatrix);
 window.onkeydown = function(e) {
 	switch(e.keyCode){
-		case 87:
-			//w
-			translateZ += 0.1;
+		case 87: // w
+			translateZ += 1.0;
 			break;
-		case 83:
-			//s
-			translateZ -= 0.01;
+		case 83: // s
+			translateZ -= 1.0;
 			break;
+        case 80: // p
+            pauseBoolF();
+            break;
 		default:
 	}
 };
@@ -153,7 +154,7 @@ function drawScene()
 	translationMat = mat4.create();
 	mat4.identity(translationMat);
 	mat4.translate(translationMat, translationMat, [0.0, 0.0, translateZ]);
-	// mat4.translate(translationMat, translationMat, [earthSystem.pos[0] / VISUAL_FACTOR, earthSystem.pos[1] / VISUAL_FACTOR, earthSystem.pos[2] / VISUAL_FACTOR]);
+	// mat4.translate(translationMat, translationMat, [earthSystem.pos[0] / distanceFactor, earthSystem.pos[1] / distanceFactor, earthSystem.pos[2] / distanceFactor]);
 	
 	rotateModelViewMatrixUsingQuaternion();
 	glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
@@ -201,6 +202,14 @@ function orbitBoolF()
 function updateTimeFactor()
 {
     timeFactor = document.getElementById("timeRange").value;
+}
+function updateVisualFactor()
+{
+    visualFactor = document.getElementById("visualRange").value;
+}
+function updateDistanceFactor()
+{
+    distanceFactor = document.getElementById("distanceRange").value;
 }
 function handleOBJModel(filename, data){
 	console.info(filename + ' has been retrieved from the server');
