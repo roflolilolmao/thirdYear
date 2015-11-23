@@ -20,14 +20,17 @@
             uniform vec3 center;
             uniform float radius;
             
-            // uniform float rotation; todo
+            uniform float rotation;
+            uniform vec3 offset;
+            
             uniform float inclination;
             
             varying vec3 vLightpos;
             varying vec2 vTextureCoord;
             varying vec4 vPosition;
             varying vec3 vNormal;
-			varying mat3 tbn;
+            varying vec3 vCenter;
+            varying mat3 tbn;
             
             // source http://www.geeks3d.com/20141201/how-to-rotate-a-vertex-by-a-quaternion-in-glsl/
             vec4 quat_from_axis_angle(vec3 axis, float angle)
@@ -66,24 +69,26 @@
             }
             void main(void)
             {
-                vec3 position = rotate_vertex_position(aVertexPosition * radius, vec3(1.0, 0.0, 0.0), 90.0 - inclination);
-				vPosition = uMVMatrix * vec4(position + center, 1.0);
+                vec3 vertex = rotate_vertex_position(aVertexPosition, vec3(0.0, 1.0, 0.0), rotation * 360.0);
+                vec3 position = rotate_vertex_position(vertex * radius, vec3(1.0, 0.0, 0.0), 90.0 - inclination);
+                vPosition = uMVMatrix * vec4(position + center + offset, 1.0);
                 gl_Position = uPMatrix * vPosition;
                 vTextureCoord = aTextureCoord;
                 vNormal = normalize((uNMatrix * vec4(position, 1.0)).xyz);
-                vLightpos = (uMVMatrix * vec4(lightpos, 1.0)).xyz;				
-				
-				float theta = acos(position.z / radius) + 3.14159 / 2.0;
-				float phi = atan(position.y, position.x);
-				vec3 tangent = normalize((uNMatrix * vec4(
-						sin(theta) * cos(phi) * radius,
-						sin(theta) * sin(phi) * radius, 
-						cos(theta) * radius
-					, 1.0)).xyz);
-				vec3 bitangent = normalize(cross(vNormal, tangent));
-				tbn = mat3(tangent, bitangent, vNormal);
-				
-				// http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-13-normal-mapping/
+                vLightpos = (uMVMatrix * vec4(lightpos, 1.0)).xyz;              
+                vCenter = (uMVMatrix * vec4(center, 1.0)).xyz;              
+                
+                float theta = acos(position.z / radius) + 3.14159 / 2.0;
+                float phi = atan(position.y, position.x);
+                vec3 tangent = normalize((uNMatrix * vec4(
+                        sin(theta) * cos(phi) * radius,
+                        sin(theta) * sin(phi) * radius, 
+                        cos(theta) * radius
+                    , 1.0)).xyz);
+                vec3 bitangent = normalize(cross(vNormal, tangent));
+                tbn = mat3(tangent, bitangent, vNormal);
+                
+                // http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-13-normal-mapping/
             }
         </script>
         <script id="shader-fs" type="x-shader/x-fragment">
@@ -91,7 +96,6 @@
                 precision highp float;
             #endif
             const float alpha = 16.0;
-            const vec3 lightpos = vec3(0.0, 0.0, 0.0);
             uniform sampler2D uColorTexture;
             uniform sampler2D uNormalTexture;
             uniform sampler2D uSpecularTexture;
@@ -100,45 +104,65 @@
             uniform sampler2D uAtmosphereNormals;
             uniform vec3 center;
             uniform float radius;
+            uniform float rotationAtmo;
             uniform int fmode;
             varying vec3 vLightpos;
             varying vec2 vTextureCoord;
             varying vec4 vPosition;
             varying vec3 vNormal;
-			varying mat3 tbn;
+            varying vec3 vCenter;
+            varying mat3 tbn;
+            vec3 frag(vec3 color, vec3 normal, vec3 specularMap)
+            {
+                vec3 L = normalize((vLightpos - vCenter.xyz));
+                vec3 N = normalize(tbn * normal);
+                float lambertTerm = max(dot(N, L), 0.0);
+                
+                vec3 finalColor = vec3(1.0, 1.0, 1.0) * lambertTerm;
+               
+                vec3 E = normalize((-vPosition.xyz));
+                vec3 R = reflect(-L, N);
+                float specular = pow(max(dot(R, E), 0.0), alpha) * lambertTerm;
+                finalColor += specular * specularMap;
+                finalColor *= color;
+                
+                return finalColor;
+            }
             void main(void) {
+                vec2 offsetAtmo = vec2(rotationAtmo, 0.0);
+                vec2 coordAtmo = vec2(vTextureCoord.s, vTextureCoord.t);
+                coordAtmo += offsetAtmo;
+                if(coordAtmo.x > 1.0) coordAtmo.x -= 1.0;
                 vec3 texelColor = texture2D(uColorTexture, vTextureCoord).rgb;
                 if(fmode == 1) // earth
                 {
                     vec3 texelNormal = texture2D(uNormalTexture, vTextureCoord).rgb * 2.0 - 1.0;
                     vec3 texelSpecular = texture2D(uSpecularTexture, vTextureCoord).rgb;
                     vec3 texelNight = texture2D(uEarthNight, vTextureCoord).rgb;
-					vec3 texelAtmo = texture2D(uAtmosphere, vTextureCoord).rgb;
+                    vec3 texelAtmo = texture2D(uAtmosphere, coordAtmo).rgb;
+                    vec3 texelAtmoNormal = texture2D(uAtmosphereNormals, coordAtmo).rgb * 2.0 - 1.0;
                     
-                    vec3 finalColor;
-                    vec3 finalAtmo;
+                    vec3 color;
+                    vec3 nightColor;
+                    if(texelAtmo.r > 0.75)
+                    {
+                        nightColor = vec3(0.0, 0.0, 0.0);
+                        
+                        color = frag(vec3(1.0, 1.0, 1.0), texelAtmoNormal, vec3(1.0, 1.0, 1.0));
+                    }
+                    else
+                    {
+                        vec3 L = normalize((vLightpos - vPosition.xyz));
+                        vec3 N = normalize(tbn * texelNormal);
+                        float lambertTerm = dot(N, L);
+                        texelNight *= length(texelNight) / 1.5;
+                        nightColor = max(texelNight * (0.3 - lambertTerm), 0.0);
+                        
+                        color = frag(texelColor, texelNormal, texelSpecular);
+                    }
+                    color += nightColor;
                     
-                    vec3 L = normalize((vLightpos - vPosition.xyz));
-                    
-                    vec3 N = normalize(tbn * texelNormal);
-
-                    float lambertTerm = dot(N, L);
-                    finalColor += vec3(1.0, 1.0, 1.0) * max(lambertTerm, 0.0);
-                    
-                    vec3 E = normalize((-vPosition.xyz));
-                    vec3 R = reflect(-L, N);
-                    float specular = pow(max(dot(R, E), 0.0), alpha);
-                    finalColor += specular * texelSpecular;
-					
-					// vec3 color = texelAtmo.r > 0.5 ? texelAtmo : texelColor;
-					
-					// can probably do better for transition
-                    finalColor *= texelColor;
-					
-                    vec3 nightColor = max(texelNight * (0.3 - lambertTerm), 0.0);
-                    finalColor += nightColor;
-					
-                    gl_FragColor = vec4(finalColor, 1.0);
+                    gl_FragColor = vec4(color, 1.0);
                 }
                 else
                 {
@@ -148,25 +172,32 @@
         </script>
     </head>
     <body onload="initWebGL()">
-        <canvas id="webgl-canvas" width="1000" height="1000">
+        <canvas id="webgl-canvas" width="1500" height="1500">
             HTML5 is not supported
         </canvas>
-        <aside style="float:right; height:100%; padding-top:700px;">
+        <aside>
             <div>
                 <button onclick="pauseBoolF()">Play/pause</button>
             </div>
             <div>
                 <button onclick="orbitBoolF()">Show/hide orbits</button>
             </div>
-            <div>
+            <div class="clearfix">
+                <label>Time</label>
                 <input type="range" id="timeRange" value="1" min="1" max="1000" oninput="updateTimeFactor()"/>
             </div>
-            <div>
-                <input type="range" id="visualRange" value="10" min="1" max="15" oninput="updateVisualFactor()"/>
+            <div class="clearfix">
+                <label>Size</label>
+                <input type="range" id="visualRange" value="1" min="1" max="40" oninput="updateVisualFactor()"/>
             </div>
-            <div>
-                <input type="range" id="distanceRange" value="10" min="1" max="15" oninput="updateDistanceFactor()"/>
+            <div class="clearfix">
+                <label>Distance</label>
+                <input type="range" id="distanceRange" value="5" min="1" max="40" oninput="updateDistanceFactor()"/>
             </div>
+            <div class="clearfix">
+                <label>Look at</label>
+                <select id="bodySelector" onchange="selector()">
+                </select>
         </aside>
     </body>
     <script src='../js/mouseMotionHandling.js'></script>

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" href="css/molecular.css">
+    <script src="js/commonFunctions.js"></script>
+    <script src="js/gl-matrix-min.js"></script>
+    <script src="js/webglTools.js"></script>
+
+    <script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec4 aColor;
+		    uniform mat4 uMVMatrix;
+		    uniform mat4 uPMatrix;
+			varying vec4 vColor;
+		    void main(void) {
+		        vec4 transformedVertexPos = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+				gl_Position = transformedVertexPos;
+				vec3 colorComponents = aColor.xyz + transformedVertexPos.z * 0.5;
+				vColor = vec4(colorComponents, 1.0);
+			}
+    </script>
+    <script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+				precision highp float;
+			#endif
+			varying vec4 vColor;
+			void main(void) {
+		   		gl_FragColor = vColor;
+			}
+    </script>
+
+    <script>
+        /**
+         * Molecule
+         *
+         * Define a whole molecule
+         *
+         * @param atoms Array of every atoms that compose the molecule
+         * @param links Array of every links between Atoms
+         * @constructor
+         */
+        function Molecule(atoms, links) {
+            this.atoms = atoms;
+            this.links = links;
+        }
+        /**
+         * Atom
+         *
+         * Define an atom
+         *
+         * @param name Name of the atom
+         * @param color Display color
+         * @param radius Radius of the atom
+         * @param position Position in 3D of the Atom
+         * @constructor
+         */
+        function Atom(name, color, radius, position) {
+            this.name = name;
+            this.color = color;
+            this.radius = radius;
+            this.position = position;
+        }
+        /**
+         * Link
+         *
+         * Define a link between two atoms
+         *
+         * @param atom1
+         * @param atom2
+         * @constructor
+         */
+        function Link(atom1, atom2) {
+            this.atom1 = atom1;
+            this.atom2 = atom2;
+        }
+        function Point3d(x, y, z) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+        function Color(r, g, b, a) {
+            this.r = r;
+            this.g = g;
+            this.b = b;
+            this.a = a;
+        }
+        var white = new Color(1.0, 1.0, 1.0, 1.0);
+        var red = new Color(1.0, 0.0, 0.0, 1.0);
+        // testing with H2O
+        var atoms = [
+            new Atom("H", white, 0.2, new Point3d(0.0, 0.7, 0.0)),
+            new Atom("H", white, 0.2, new Point3d(0.7, 0.0, 0.0)),
+            new Atom("O", red, 0.35, new Point3d(0.0, 0.0, 0.0))
+        ];
+        var links = [
+            new Link(atoms[0], atoms[2]),
+            new Link(atoms[1], atoms[2])
+        ];
+        var waterMolecule = new Molecule(atoms, links);
+        var rotY = 0;
+        var rotX = 0;
+        var vertexBuffer = null;
+        var indexBuffer = null;
+        var colorBuffer = null;
+        var indices = [];
+        var vertices = [];
+        var colors = [];
+        var indexCnt = 0;
+        var mvMatrix = mat4.create();
+        var pMatrix = mat4.create();
+        window.onkeydown = checkKey;
+        function checkKey(ev) {
+            switch (ev.keyCode) {
+                case 65:
+                    rotY -= 2.0;
+                    break;
+                case 68:
+                    rotY += 2.0;
+                    break;
+                case 87:
+                    rotX -= 2.0;
+                    break;
+                case 83:
+                    rotX += 2.0;
+                    break;
+                default:
+                    console.log(ev.keyCode);
+                    break;
+            }
+        }
+        function initShaderParameters(prg) {
+            prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+            glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+            prg.colorAttribute = glContext.getAttribLocation(prg, "aColor");
+            glContext.enableVertexAttribArray(prg.colorAttribute);
+            prg.pMatrixUniform = glContext.getUniformLocation(prg, 'uPMatrix');
+            prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
+        }
+        //        function normalize(v) {
+        //            var d = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+        //            if (d != 0.0) {
+        //                v[0] /= d;
+        //                v[1] /= d;
+        //                v[2] /= d;
+        //            }
+        //            return v;
+        //        }
+        //        function subdivise(v1, v2, v3, depth) {
+        //            var v12 = [];
+        //            var v23 = [];
+        //            var v31 = [];
+        //            var i;
+        //
+        //            if (depth == 0) {
+        //                vertices.push(v1[0], v1[1], v1[2]);
+        //                colors.push(vertexColor[0], vertexColor[1], vertexColor[2], vertexColor[3]);
+        //                vertices.push(v2[0], v2[1], v2[2]);
+        //                colors.push(vertexColor[0], vertexColor[1], vertexColor[2], vertexColor[3]);
+        //                vertices.push(v3[0], v3[1], v3[2]);
+        //                colors.push(vertexColor[0], vertexColor[1], vertexColor[2], vertexColor[3]);
+        //                indices.push(indexCnt, indexCnt + 1, indexCnt + 1, indexCnt + 2, indexCnt + 2, indexCnt);
+        //                indexCnt += 3;
+        //            } else {
+        //                for (i = 0; i < 3; i++) {
+        //                    v12.push((v1[i] + v2[i]) / 2.0);
+        //                    v23.push((v2[i] + v3[i]) / 2.0);
+        //                    v31.push((v3[i] + v1[i]) / 2.0);
+        //                }
+        //                v12 = normalize(v12);
+        //                v23 = normalize(v23);
+        //                v31 = normalize(v31);
+        //                subdivise(v1, v12, v31, depth - 1);
+        //                subdivise(v2, v23, v12, depth - 1);
+        //                subdivise(v3, v31, v23, depth - 1);
+        //                subdivise(v12, v23, v31, depth - 1);
+        //            }
+        //        }
+        function createIcosaedre() {
+            vertices = [];
+            colors = [];
+            indices = [];
+            phi = (1.0 + Math.sqrt(5.0)) / 2.0;
+            vertices.push(-phi, 0.0, 1.0);
+            vertices.push(phi, 0.0, 1.0);
+            vertices.push(-phi, 0.0, -1.0);
+            vertices.push(phi, 0.0, -1.0);
+            vertices.push(0.0, 1.0, phi);
+            vertices.push(0.0, 1.0, -phi);
+            vertices.push(0.0, -1.0, phi);
+            vertices.push(0.0, -1.0, -phi);
+            vertices.push(1.0, phi, 0.0);
+            vertices.push(-1.0, phi, 0.0);
+            vertices.push(1.0, -phi, 0.0);
+            vertices.push(-1.0, -phi, 0.0);
+            console.log(vertices);
+            for (i = 0; i < 12; i++) {
+                colors.push(1.0, 0.0, 0.0, 1.0);
+            }
+            indices.push(4, 8, 1);
+            indices.push(10, 6, 1);
+            indices.push(6, 4, 1);
+            indices.push(8, 3, 1);
+            indices.push(3, 10, 1);
+            indices.push(4, 9, 8);
+            indices.push(2, 9, 0);
+            indices.push(9, 4, 0);
+            indices.push(11, 6, 10);
+            indices.push(11, 2, 0);
+            indices.push(6, 11, 0);
+            indices.push(5, 3, 8);
+            indices.push(9, 5, 8);
+            indices.push(5, 9, 2);
+            indices.push(3, 7, 10);
+            indices.push(7, 11, 10);
+            indices.push(11, 7, 2);
+            indices.push(7, 5, 2);
+            indices.push(5, 7, 3);
+            vertexBuffer = getVertexBufferWithVertices(vertices);
+            indexBuffer = getIndexBufferWithIndices(indices);
+            colorBuffer = getVertexBufferWithVertices(colors);
+        }
+        function initBuffers() {
+            createIcosaedre();
+        }
+        function drawScene() {
+            glContext.clearColor(0.9, 0.9, 1.0, 1.0);
+            glContext.enable(glContext.DEPTH_TEST);
+            glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+            glContext.viewport(0, 0, c_width, c_height);
+            mat4.perspective(pMatrix, degToRad(60), c_width /c_height, 0.1, 10000.0);
+            // mat4.identity(mvMatrix);
+            translationMat = mat4.create();
+            mat4.identity(translationMat);
+            mat4.translate(translationMat, translationMat, [0.0, 0.0, -5.0]);
+            mvtMatrix = mat4.create();
+            mat4.multiply(mvtMatrix, translationMat, mvMatrix);
+            rotateModelViewMatrixUsingQuaternion();
+            glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+            glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvtMatrix);
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+            glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
+            glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+            glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+            glContext.drawElements(glContext.LINES, indices.length, glContext.UNSIGNED_SHORT, 0);
+            
+            rotX = 0;
+            rotY = 0;
+        }
+        function initWebGL() {
+            glContext = getGLContext('webgl-canvas');
+            initProgram();
+            initBuffers();
+            renderLoop();
+        }
+    </script>
+</head>
+
+
+<body onload="initWebGL()">
+<header>
+    <h1>molecular</h1>
+
+    <p>© Roulin Thomas</p>
+</header>
+
+<div id="container">
+    <div>
+        <p>Molecule</p>
+        <label for="select_molecule">Choose your molecule</label>
+        <select name="select_molecule" id="select_molecule">
+            <option value="0">Eau (H2O)</option>
+            <option value="1">Lol</option>
+            <option value="2">Test</option>
+        </select>
+    </div>
+    <br>
+    <canvas id="webgl-canvas" width=700" height="700">
+        HTML5 is not supported
+    </canvas>
+</div>
+</body>
+<script src='js/mouseMotionHandling.js'></script>
+</html>
