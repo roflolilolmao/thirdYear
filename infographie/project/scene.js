@@ -215,8 +215,7 @@ function handleOBJModel(filename, data){
 	console.info(filename + ' has been retrieved from the server');
 	
 	var objData = new OBJ.Mesh(data);
-	
-	
+    
 	// pushpush
 	vertexBuffer = getVertexBufferWithVertices(objData.vertices);
 	normalsBuffer = getVertexBufferWithVertices(objData.vertexNormals);
