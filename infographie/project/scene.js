@@ -110,7 +110,7 @@ function initBuffers()
 }
 function initScene()
 {
-	sol = createPlanet(1988500, 0, 0, 0.02, [1, 1, 1], 0, 7.25);
+	sol = createPlanet(1988500, 0, 0, 0.1, [1, 1, 1], 0, 7.25);
 	mercury = createPlanet(0.3301, 38.86, 69.82, 0.01, [0.5, 0.3, 0.2], 10, 0.034);
 	venus = createPlanet(4.8676, 34.79, 108.94, 0.015, [0.9, 0.9, 0.7], 20, 177.36);
 	earth = createPlanet(5.9726, 29.29, 152.10, 0.02, [0.3, 0.5, 1.0], 30, 23.44);
@@ -178,10 +178,8 @@ function drawScene()
 		drawSystem();
 	}
 }
-function initWebGL()
+function loadRessources()
 {
-	glContext = getGLContext('webgl-canvas');
-	initProgram();
 	loadModel("ressources/earth.obj");
 	initTextureWithImage("ressources/texMap4k_Earth_main.jpg", texColorTab);
 	initTextureWithImage("ressources/texMap4k_Earth_normal.jpg", texColorTab);
@@ -189,6 +187,14 @@ function initWebGL()
 	initTextureWithImage("ressources/texMap4k_Earth_night.jpg", texColorTab);
 	initTextureWithImage("ressources/texMap4k_Earth_atmosphere.jpg", texColorTab);
 	initTextureWithImage("ressources/texMap4k_Earth_atmosphere_normal.jpg", texColorTab);
+}
+function initWebGL()
+{
+	glContext = getGLContext('webgl-canvas');
+	updateDistanceFactor();
+	updateVisualFactor();
+	initProgram();
+	loadRessources();
 	initScene();
 }
 function pauseBoolF()
@@ -205,11 +211,15 @@ function updateTimeFactor()
 }
 function updateVisualFactor()
 {
-    visualFactor = document.getElementById("visualRange").value;
+	var v = document.getElementById("visualRange").value;
+	v = v < 20 ? v / 20 : v -19;
+	visualFactor = v;
 }
 function updateDistanceFactor()
 {
-    distanceFactor = document.getElementById("distanceRange").value;
+    var v = document.getElementById("distanceRange").value;
+	v = v / 40;
+    distanceFactor = v;
 }
 function handleOBJModel(filename, data){
 	console.info(filename + ' has been retrieved from the server');

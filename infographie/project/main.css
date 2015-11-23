@@ -1,3 +1,20 @@
 #webgl-canvas{
     width:80%;
 }
+aside{
+	position: fixed;
+	top: 250px;
+	right: 20px;
+}
+input {
+	float:right;
+}
+.clearfix:before,
+.clearfix:after {
+  content: "";
+  display: table;
+}
+
+.clearfix:after {
+  clear: both;
+}

@@ -3,8 +3,8 @@ var deltaT = 24 * 60 * 10;
 var ASTRONOMICAL_UNIT = 149597870700;
 var G = 6.67e-11;
 // var G = 1;
-var DISTANCE_FACTOR = 10;
-var VISUAL_FACTOR = 10;
+var distanceFactor = 10;
+var visualFactor = 1;
 var MASS_FACTOR = 1e24 / ASTRONOMICAL_UNIT / ASTRONOMICAL_UNIT;
 var POSITION_FACTOR = 1e9 / ASTRONOMICAL_UNIT;
 var SPEED_FACTOR = 1 / ASTRONOMICAL_UNIT;
@@ -36,11 +36,11 @@ Planet.prototype.draw = function(mainBodyPos)
 		glContext.uniform1i(prg.vmode, 1);
 	}
 	var c = [
-		(this.pos[0] + mainBodyPos[0]) / DISTANCE_FACTOR,
-		(this.pos[1] + mainBodyPos[1]) / DISTANCE_FACTOR,
-		(this.pos[2] + mainBodyPos[2]) / DISTANCE_FACTOR
+		(this.pos[0] + mainBodyPos[0]) / distanceFactor,
+		(this.pos[1] + mainBodyPos[1]) / distanceFactor,
+		(this.pos[2] + mainBodyPos[2]) / distanceFactor
 	];
-	glContext.uniform1f(prg.radius, this.radius);
+	glContext.uniform1f(prg.radius, this.radius / visualFactor);
 	glContext.uniform3f(prg.center, c[0], c[1], 0.0);
 	glContext.uniform3f(prg.colorPlanet, this.color[0], this.color[1], this.color[2]);
     
