@@ -28,6 +28,7 @@ def gcdPrint(n, m):
 
 
 def ex4_1():
+    print('- Exercise 4.1 -')
     gcdPrint(a[0], a[1])
     gcdPrint(b[0], b[1])
     gcdPrint(c[0], c[1])
@@ -74,6 +75,7 @@ def inversePrint(n, m):
 
 
 def ex4_2():
+    print('\n- Exercise 4.2 -')
     print('\t- a) -')
     bezoutPrint(a[0], a[1])
     bezoutPrint(b[0], b[1])
@@ -115,6 +117,7 @@ def printEx4_3(x, e, n):
 
 
 def ex4_3():
+    print('\n- Exerise 4.3 -')
     for e in range(10000, 10011):
         printEx4_3(5317, e, 2119)
     printEx4_3(987654321, 123456789, 2038074743)
@@ -132,9 +135,8 @@ def ex4_3():
 # Main
 
 if __name__ == '__main__':
-    print('- Exercise 4.1 -')
-    ex4_1()
-    print('\n- Exercise 4.2 -')
-    ex4_2()
-    print('\n- Exerise 4.3 -')
-    ex4_3()
+    # ex4_1()
+    # ex4_2()
+    # ex4_3()
+    print(inverse(160, 353))
+    print(139 * 52 % 353)
