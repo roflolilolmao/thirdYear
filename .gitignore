@@ -1,4 +1,7 @@
 # infographie
-models/*
-fig/*
-Video/*
+infographie/models/*
+infographie/fig/*
+infographie/Video/*
+infographie/models/
+infographie/fig/
+infographie/Video/

@@ -13,8 +13,8 @@ tp4 compilo
 <!-- projects -->
 <p3>
 wiki!
-améliorer perf => openCV
-camera support
+paramètres caméra (shutter time)
+simulateur de mouches sur natel
 <webgl>
 <android>
 wtf

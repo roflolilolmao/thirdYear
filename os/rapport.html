@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Abel">
+		<link href='https://fonts.googleapis.com/css?family=Ubuntu' rel='stylesheet' type='text/css'>
+		<style>
+			header{
+				font-family: 'Ubuntu', sans-serif;
+				text-align:center;
+				margin-top: 3em;
+			}
+			html{
+				font-family: 'Abel', sans-serif;
+                text-align: justify;
+			}
+			article{
+				width: 75%;
+				margin-right: auto;
+				margin-left: auto;
+			}
+			span{
+				font-family: "Lucida Console", Monaco, monospace;
+			}
+			img{
+				display:block;
+				margin-left: auto;
+				margin-right: auto;
+                width:100%;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h2>Rapport pour le tp2</h2>
+			<p>Par Quentin Jeanmonod</p>
+		</header>
+		<article>
+			<header>
+				<h3>Introduction</h3>
+			</header
+			<p>Le but de ce deuxième TP est de compiler un nouveau kernel sur une machine linux.</p>
+		</article>
+		<article>
+			<header>
+				<h3>Déroulement</h3>
+			</header>
+			<p>Tout d'abord, je commence par déterminer la version actuelle de mon noyau linux à l'aide de <span>uname</span>.</p>
+			<img src="images/01-avanttouteschoses.png" alt="fixme"/>
+			<br>
+			<p>Après avoir téléchargé et extrait la version 4.3 du kernel (dernière version stable actuellement, 04 novembre 2015), je visite les dossiers créés par la commande <span>tar xpvf linux-4.3.tar.xz -C ./linux-4.3</span>.</p>
+			<p>J'utilise <span>make help</span> afin de déterminer comment créer le fichier .config pour la compilation.</p>
+			<img src="images/02-config.png" alt="fixme"/>
+			<p>L'option olddefconfig m'a l'air d'être la manière la plus simple de configurer en se basant sur la config actuelle, c'est donc cette option que j'utiliserai.</p>
+			<img src="images/04-config3.png" alt="fixme"/>
+            <p>Après cette étape, j'utilise <span>make menuconfig</span> afin de pouvoir modifier manuellement certaines entrées, telles que le protocole IpV6 qui m'est inutile. Puisque j'ai eu différentes erreurs de symboles invalides après avoir utiliser make olddefconfig, j'ai commencé par vérifier ces symboles en les recherchant avec /.<p>
+            <img src="images/ACPI_PCI_SLOT-search.png" alt="fixme"/>
+            <p>Le configurateur est plutôt malin puisqu'il leur a assigné automatiquement des valeurs (que j'imagine être les valeurs par défaut). Je ne les ai donc pas changé, n'ayant aucune idée de leurs utilités (et l'aide avec ? ne m'a guère rendu service).</p>
+            <img src="images/removedipv6.png" alt="fixme"/><br>
+            <img src="images/removedamateurradio.png" alt="fixme"/><br>
+            <img src="images/removed8+CPU.png" alt="fixme"/>
+            <p>J'ai enlevé le protocole IpV6, la radio amateur, l'option permettant d'avoir plus de 8 CPU. J'ai également enlevé tous les drivers de cartes et chipsets graphiques ne correspondant pas à mon laptop. J'ai également activé le logo au démarrage car je trouvais ça rigolo.</p>
+            <p>J'ai malheureusement perdu tous les screenshots suivants, mon linux n'ayant pas survécu à ce qui va suivre.</p>
+            <p>Après avoir fini la configuration, j'ai lancé la compilation avec <span>make -j8</span>, ce qui était une mauvaise idée car mon vieux laptop n'est plus ventilé correctement, il a donc surchauffé au milieu de cette opération. Après l'avoir relancé, j'ai effectué un <span>make clean</span>. J'ai ensuite posé mon laptop dans l'abri anti-atomique de la maison, où il fait approximativement 5°C et lancé <span>make -j2</span>. Cette fois la compilation s'est passée sans problème et j'ai pu l'installer avec <span>sudo make install</span> suivit de <span>sudo make modules_install</span>.</p>
+            <p>Après avoir redémarré mon laptop, j'ai bien un nouveau kernel dans le GRUB, qui s'appelle 4.3.0. Lorsque je boot dessus, rien ne charge après le kernel. Je peux lancé une interface console avec <span>ctrl-alt-f1</span> mais la plupart des commandes ne marchent pas (par exemple ifconfig). Je pense qu'il me manque une étape où je configure le fichier de chargement de l'OS. Ce qui m'échappe est que mon ancien kernel (qui d'abord marchait niquel) a maintenant été contaminé par le même problème.</p>
+            <p>A noter qu'en mode "sans échec", j'ai accès à des commandes plus sympatiques que les commandes kernel de base, j'ai donc pu réinstallé les drivers graphiques de ma carte graphique manuellement, mais il est possible que c'est cette étape qui a cassé mon ancien kernel...</p>            
+		</article>
+        <article>
+            <header>
+                <h3>En conclusion</h3>
+            </header>
+            <p>D'après mon analyse, il est fort probable que mon kernel soit compilé et installé correctement. Malheureusement, il manque une étape cruciale à son utilisation, mais mes recherches sont restées infructueuses.</p>
+        </article>
+	</body>
+</html>
