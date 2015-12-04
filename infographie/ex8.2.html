@@ -15,6 +15,7 @@
 			uniform mat4 uPMatrix;
 			uniform mat4 uNMatrix;
 			uniform int dong;
+			uniform int mode;
 			uniform float uShininess;
 			uniform vec3 uLightAmbient;
 			uniform vec3 uMaterialDiffuse;
@@ -25,26 +26,41 @@
 			varying vec3 vEyeVec;
 			varying vec3 vColor;
 			void main(void) {
-				vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);
-				vec4 light = vec4(uLightPosition,1.0);
-				vLightRay = vertex.xyz - light.xyz;
-				vEyeVec = -vec3(vertex.xyz);
-				normals = vec3(uNMatrix * vec4(aNormalPosition, 1.0));
-				
-				vec3 finalColor = uLightAmbient;
-				if(dong == 0) // gouraud
-				{
-					vec3 L = normalize(vLightRay);
-					vec3 N = normalize(normals);
-					float lambertTerm = dot(N, -L);
-					finalColor += uMaterialDiffuse * lambertTerm;
-					vec3 E = normalize(vEyeVec);
-					vec3 R = reflect(L, N);
-					float specular = pow( max(dot(R, E), 0.0), uShininess);
-					finalColor += uMaterialSpecular * specular;
-				}
-				vColor = finalColor;
-				gl_Position = uPMatrix * vertex;
+                if (mode == 0)
+                {
+                    vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);
+                    vec4 light = vec4(uLightPosition,1.0);
+                    vLightRay = vertex.xyz - light.xyz;
+                    vEyeVec = -vec3(vertex.xyz);
+                    normals = vec3(uNMatrix * vec4(aNormalPosition, 1.0));
+                    
+                    vec3 finalColor = uLightAmbient;
+                    if(dong == 0) // gouraud
+                    {
+                        vec3 L = normalize(vLightRay);
+                        vec3 N = normalize(normals);
+                        float lambertTerm = dot(N, -L);
+                        finalColor += uMaterialDiffuse * lambertTerm;
+                        vec3 E = normalize(vEyeVec);
+                        vec3 R = reflect(L, N);
+                        float specular = pow( max(dot(R, E), 0.0), uShininess);
+                        finalColor += uMaterialSpecular * specular;
+                    }
+                    vColor = finalColor;
+                    gl_Position = uPMatrix * vertex;
+                }
+                else
+                {
+                    vec4 vertex = uNMatrix * vec4(aVertexPosition, 1.0);
+                    vec4 light = vec4(uLightPosition,1.0);
+                    vLightRay = vertex.xyz - light.xyz;
+                    vEyeVec = -vec3(vertex.xyz);
+                    normals = vec3(uNMatrix * vec4(aNormalPosition, 1.0));
+                    
+                    vec3 finalColor = uLightAmbient;
+                    vColor = finalColor;
+                    gl_Position = uPMatrix * vertex;
+                }
 			}
 		</script>
 		<script id="shader-fs" type="x-shader/x-fragment">
@@ -61,6 +77,7 @@
 			varying vec3 vLightRay;
 			varying vec3 vEyeVec;
 			varying vec3 vColor;
+			uniform int mode;
 			void main(void) {
 				gl_FragColor = vec4(vColor, 1.0);
 				if(dong == 1) // phong
@@ -76,6 +93,10 @@
 					finalColor += uMaterialSpecular * specular;
 					gl_FragColor = vec4(finalColor, 1.0);
 				}
+                if (mode == 1)
+                {
+                    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+                }
 			}
 		</script>
 		<script>
@@ -226,6 +247,7 @@
 				prg.mvMatrixUniform = glContext.getUniformLocation(prg, 'uMVMatrix');
 				prg.nMatrixUniform = glContext.getUniformLocation(prg, 'uNMatrix');
 				prg.dong = glContext.getUniformLocation(prg, 'dong');
+				prg.mode = glContext.getUniformLocation(prg, 'mode');
 			    prg.lightPositionUniform = glContext.getUniformLocation(prg, 'uLightPosition');
 			    prg.shininessUniform = glContext.getUniformLocation(prg, 'uShininess');
 			    prg.lightAmbientUniform = glContext.getUniformLocation(prg, 'uLightAmbient');
@@ -265,6 +287,7 @@
 				if(indicesArray.length > 1)
 				{
 					glContext.uniform1i(prg.dong, dong);
+					glContext.uniform1i(prg.mode, 0);
 					
 					// vertices
 					glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffersArray[2]);
@@ -276,6 +299,18 @@
 					glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffersArray[2]);
 					
 					glContext.drawElements(glContext.TRIANGLES, indicesArray[2].length, glContext.UNSIGNED_SHORT,0);
+                    
+					glContext.uniform1i(prg.mode, 1);
+					// vertices
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffersArray[1]);
+					glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+					// vertex normals
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, normalBuffersArray[1]);
+					glContext.vertexAttribPointer(prg.normalPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+					// indices
+					glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffersArray[1]);
+					
+					glContext.drawElements(glContext.LINES, indicesArray[1].length, glContext.UNSIGNED_SHORT,0);
 				}
 			}
 			function initWebGL(){
