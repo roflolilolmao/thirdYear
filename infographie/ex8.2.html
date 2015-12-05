@@ -51,7 +51,7 @@
                 }
                 else
                 {
-                    vec4 vertex = uNMatrix * vec4(aVertexPosition, 1.0);
+                    vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);
                     vec4 light = vec4(uLightPosition,1.0);
                     vLightRay = vertex.xyz - light.xyz;
                     vEyeVec = -vec3(vertex.xyz);

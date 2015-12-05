@@ -2,9 +2,11 @@
 listen dozer ghost things 
 
 <!-- tests -->
-te1 QL 4 décembre
-te1 JEE 11 décembre
 crypto 9 décembre
+te1 QL 11 décembre
+référentiel de test 1 
+éléments préliminaires importance qdl 1-2
+stratégie de test 1-2
 
 <!-- devoirs -->
 crypto 25.11
