@@ -1,13 +1,23 @@
 import sys
 import cv2
 import numpy as np
-import urllib
+import urllib2
+import requests
 import struct
 import binascii
 
 
+username = 'user'
+password = 'pass'
+
+
 def getc(s):
-    return urllib.urlopen('http://www.pythonchallenge.com/pc/' + s).read()
+    username = 'user'
+    password = 'pass'
+    url = 'http://www.pythonchallenge.com/pc/' + s
+    r = requests.get(url, auth=(username, password))  
+    # page = r.content()
+    return r.content()
 
 
 def fouslamerde(h):
@@ -55,10 +65,9 @@ def e12():
 
 
 def e13():
-    img = cv2.imread('disprop.jpg')
-    img = (255 - img)
-    cv2.imshow('peutetre', img)
-    cv2.waitKey()
+    bert = '22337778'
+    p = getc('return/bert.html')
+    print(p)
 
 
 e13()
