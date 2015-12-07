@@ -192,7 +192,7 @@ function loadRessources()
     loadModel("ressources/earth.obj");
     initTextureWithImage("ressources/texMap4k_Earth_main.jpg", texColorTab);
     initTextureWithImage("ressources/texMap4k_Earth_normal.jpg", texColorTab);
-    initTextureWithImage("ressources/planetEarth_specularMap.jpg", texColorTab);
+    initTextureWithImage("ressources/spectest.jpg", texColorTab);
     initTextureWithImage("ressources/texMap4k_Earth_night.jpg", texColorTab);
     initTextureWithImage("ressources/texMap4k_Earth_atmosphere.jpg", texColorTab);
     initTextureWithImage("ressources/texMap4k_Earth_atmosphere_normal.jpg", texColorTab);
