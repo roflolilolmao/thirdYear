@@ -63,6 +63,18 @@ def dist_y(a, b):
     return math.fabs(a[1] - b[1])
 
 
+def printpath(path, links, i):
+    print('From {} to {}, with heuristic {}'.format(path[0], path[len(path) - 1], i.__name__))
+    print(path)
+    dist = 0
+    for n in range(len(path)):
+        wer = filter(lambda x: (x[0] == path[n] or x[1] == n) and
+                               (x[0] == path[n + 1] or x[1] == path[n + 1]), links)
+        print(wer)
+        dist += 0
+        print('{} : {} km'.format(n, dist))
+
+
 def main():
     with open('connections.txt', 'r') as fconn:
         with open('positions.txt', 'r') as fpos:
@@ -71,8 +83,8 @@ def main():
     start, end = 'Warsaw', 'Lisbon'
     # start, end = 'Brussels', 'Prague'
     for i in h:
-        print('From {} to {}, with heuristic {}'.format(start, end, i.__name__))
-        print(astar(cities, links, start, end, i))
+        path = astar(cities, links, start, end, i)
+        printpath(path, links, i)
 
 
 if __name__ == '__main__':

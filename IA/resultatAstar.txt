@@ -1,0 +1,243 @@
+1 -- try some heuristics and compare efficiency
+
+
+Warsaw --> Lisbon
+(using h0)
+front=['Warsaw']
+his=['Warsaw']
+front=['Prague', 'Vienna', 'Budapest', 'Berlin']
+his=['Warsaw', 'Berlin']
+front=['Bern', 'Hamburg', 'Prague', 'Vienna', 'Budapest']
+his=['Warsaw', 'Berlin', 'Budapest']
+front=['Bern', 'Trieste', 'Belgrade', 'Hamburg', 'Prague', 'Vienna']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna']
+front=['Bern', 'Trieste', 'Munich', 'Belgrade', 'Hamburg', 'Prague']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna', 'Prague']
+front=['Bern', 'Trieste', 'Belgrade', 'Munich', 'Hamburg']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna', 'Prague', 'Hamburg']
+front=['Bern', 'Amsterdam', 'Trieste', 'Copenhagen', 'Belgrade', 'Munich']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna', 'Prague', 'Hamburg', 'Munich']
+front=['Rome', 'Bern', 'Amsterdam', 'Trieste', 'Copenhagen', 'Belgrade']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna', 'Prague', 'Hamburg', 'Munich', 'Belgrade']
+front=['Rome', 'Bern', 'Amsterdam', 'Trieste', 'Copenhagen']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna', 'Prague', 'Hamburg', 'Munich', 'Belgrade', 'Copenhagen']
+front=['Rome', 'Bern', 'Amsterdam', 'Trieste']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna', 'Prague', 'Hamburg', 'Munich', 'Belgrade', 'Copenhagen', 'Trieste']
+front=['Rome', 'Genoa', 'Bern', 'Amsterdam']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna', 'Prague', 'Hamburg', 'Munich', 'Belgrade', 'Copenhagen', 'Trieste', 'Amsterdam']
+front=['Rome', 'Genoa', 'Brussels', 'Bern']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna', 'Prague', 'Hamburg', 'Munich', 'Belgrade', 'Copenhagen', 'Trieste', 'Amsterdam', 'Bern']
+front=['Madrid', 'Rome', 'Genoa', 'Brussels']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna', 'Prague', 'Hamburg', 'Munich', 'Belgrade', 'Copenhagen', 'Trieste', 'Amsterdam', 'Bern', 'Brussels']
+front=['Madrid', 'Paris', 'Rome', 'Genoa']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna', 'Prague', 'Hamburg', 'Munich', 'Belgrade', 'Copenhagen', 'Trieste', 'Amsterdam', 'Bern', 'Brussels', 'Genoa']
+front=['Madrid', 'Paris', 'Rome']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna', 'Prague', 'Hamburg', 'Munich', 'Belgrade', 'Copenhagen', 'Trieste', 'Amsterdam', 'Bern', 'Brussels', 'Genoa', 'Rome']
+front=['Madrid', 'Naples', 'Paris']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna', 'Prague', 'Hamburg', 'Munich', 'Belgrade', 'Copenhagen', 'Trieste', 'Amsterdam', 'Bern', 'Brussels', 'Genoa', 'Rome', 'Paris']
+front=['Madrid', 'Naples']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna', 'Prague', 'Hamburg', 'Munich', 'Belgrade', 'Copenhagen', 'Trieste', 'Amsterdam', 'Bern', 'Brussels', 'Genoa', 'Rome', 'Paris', 'Naples']
+front=['Madrid']
+his=['Warsaw', 'Berlin', 'Budapest', 'Vienna', 'Prague', 'Hamburg', 'Munich', 'Belgrade', 'Copenhagen', 'Trieste', 'Amsterdam', 'Bern', 'Brussels', 'Genoa', 'Rome', 'Paris', 'Naples', 'Madrid']
+front=['Lisbon']
+** Found!
+** 19 states visited, 0 still open
+Warsaw (0 km)
+Berlin (345 km)
+Hamburg (527 km)
+Amsterdam (865 km)
+Brussels (1029 km)
+Paris (1254 km)
+Madrid (2059 km)
+Lisbon (2398 km)
+()
+Warsaw --> Lisbon
+(using h1)
+front=['Warsaw']
+his=['Warsaw']
+front=['Budapest', 'Vienna', 'Prague', 'Berlin']
+his=['Warsaw', 'Berlin']
+front=['Bern', 'Budapest', 'Vienna', 'Prague', 'Hamburg']
+his=['Warsaw', 'Berlin', 'Hamburg']
+front=['Bern', 'Budapest', 'Copenhagen', 'Vienna', 'Amsterdam', 'Prague']
+his=['Warsaw', 'Berlin', 'Hamburg', 'Prague']
+front=['Bern', 'Budapest', 'Copenhagen', 'Vienna', 'Munich', 'Amsterdam']
+his=['Warsaw', 'Berlin', 'Hamburg', 'Prague', 'Amsterdam']
+front=['Bern', 'Brussels', 'Budapest', 'Copenhagen', 'Vienna', 'Munich']
+his=['Warsaw', 'Berlin', 'Hamburg', 'Prague', 'Amsterdam', 'Munich']
+front=['Rome', 'Bern', 'Brussels', 'Budapest', 'Copenhagen', 'Vienna']
+his=['Warsaw', 'Berlin', 'Hamburg', 'Prague', 'Amsterdam', 'Munich', 'Vienna']
+front=['Belgrade', 'Rome', 'Trieste', 'Bern', 'Brussels', 'Budapest', 'Copenhagen']
+his=['Warsaw', 'Berlin', 'Hamburg', 'Prague', 'Amsterdam', 'Munich', 'Vienna', 'Copenhagen']
+front=['Belgrade', 'Rome', 'Trieste', 'Bern', 'Brussels', 'Budapest']
+his=['Warsaw', 'Berlin', 'Hamburg', 'Prague', 'Amsterdam', 'Munich', 'Vienna', 'Copenhagen', 'Budapest']
+front=['Rome', 'Belgrade', 'Trieste', 'Bern', 'Brussels']
+his=['Warsaw', 'Berlin', 'Hamburg', 'Prague', 'Amsterdam', 'Munich', 'Vienna', 'Copenhagen', 'Budapest', 'Brussels']
+front=['Genoa', 'Rome', 'Belgrade', 'Trieste', 'Paris', 'Bern']
+his=['Warsaw', 'Berlin', 'Hamburg', 'Prague', 'Amsterdam', 'Munich', 'Vienna', 'Copenhagen', 'Budapest', 'Brussels', 'Bern']
+front=['Madrid', 'Rome', 'Genoa', 'Belgrade', 'Trieste', 'Paris']
+his=['Warsaw', 'Berlin', 'Hamburg', 'Prague', 'Amsterdam', 'Munich', 'Vienna', 'Copenhagen', 'Budapest', 'Brussels', 'Bern', 'Paris']
+front=['Madrid', 'Rome', 'Genoa', 'Belgrade', 'Trieste']
+his=['Warsaw', 'Berlin', 'Hamburg', 'Prague', 'Amsterdam', 'Munich', 'Vienna', 'Copenhagen', 'Budapest', 'Brussels', 'Bern', 'Paris', 'Trieste']
+front=['Madrid', 'Rome', 'Belgrade', 'Genoa']
+his=['Warsaw', 'Berlin', 'Hamburg', 'Prague', 'Amsterdam', 'Munich', 'Vienna', 'Copenhagen', 'Budapest', 'Brussels', 'Bern', 'Paris', 'Trieste', 'Genoa']
+front=['Madrid', 'Rome', 'Belgrade']
+his=['Warsaw', 'Berlin', 'Hamburg', 'Prague', 'Amsterdam', 'Munich', 'Vienna', 'Copenhagen', 'Budapest', 'Brussels', 'Bern', 'Paris', 'Trieste', 'Genoa', 'Belgrade']
+front=['Madrid', 'Rome']
+his=['Warsaw', 'Berlin', 'Hamburg', 'Prague', 'Amsterdam', 'Munich', 'Vienna', 'Copenhagen', 'Budapest', 'Brussels', 'Bern', 'Paris', 'Trieste', 'Genoa', 'Belgrade', 'Rome']
+front=['Naples', 'Madrid']
+his=['Warsaw', 'Berlin', 'Hamburg', 'Prague', 'Amsterdam', 'Munich', 'Vienna', 'Copenhagen', 'Budapest', 'Brussels', 'Bern', 'Paris', 'Trieste', 'Genoa', 'Belgrade', 'Rome', 'Madrid']
+front=['Naples', 'Lisbon']
+** Found!
+** 18 states visited, 1 still open
+Warsaw (0 km)
+Berlin (345 km)
+Hamburg (527 km)
+Amsterdam (865 km)
+Brussels (1029 km)
+Paris (1254 km)
+Madrid (2059 km)
+Lisbon (2398 km)
+()
+Warsaw --> Lisbon
+(using h2)
+front=['Warsaw']
+his=['Warsaw']
+front=['Berlin', 'Prague', 'Vienna', 'Budapest']
+his=['Warsaw', 'Budapest']
+front=['Trieste', 'Berlin', 'Prague', 'Belgrade', 'Vienna']
+his=['Warsaw', 'Budapest', 'Vienna']
+front=['Munich', 'Trieste', 'Berlin', 'Prague', 'Belgrade']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade']
+front=['Munich', 'Trieste', 'Berlin', 'Prague']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade', 'Prague']
+front=['Trieste', 'Munich', 'Berlin']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade', 'Prague', 'Berlin']
+front=['Bern', 'Hamburg', 'Trieste', 'Munich']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade', 'Prague', 'Berlin', 'Munich']
+front=['Amsterdam', 'Bern', 'Hamburg', 'Rome', 'Trieste']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade', 'Prague', 'Berlin', 'Munich', 'Trieste']
+front=['Amsterdam', 'Bern', 'Genoa', 'Hamburg', 'Rome']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade', 'Prague', 'Berlin', 'Munich', 'Trieste', 'Rome']
+front=['Amsterdam', 'Bern', 'Naples', 'Genoa', 'Hamburg']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade', 'Prague', 'Berlin', 'Munich', 'Trieste', 'Rome', 'Hamburg']
+front=['Copenhagen', 'Amsterdam', 'Bern', 'Naples', 'Genoa']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade', 'Prague', 'Berlin', 'Munich', 'Trieste', 'Rome', 'Hamburg', 'Genoa']
+front=['Brussels', 'Paris', 'Madrid', 'Copenhagen', 'Amsterdam', 'Bern', 'Naples']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade', 'Prague', 'Berlin', 'Munich', 'Trieste', 'Rome', 'Hamburg', 'Genoa', 'Naples']
+front=['Brussels', 'Paris', 'Madrid', 'Copenhagen', 'Amsterdam', 'Bern']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade', 'Prague', 'Berlin', 'Munich', 'Trieste', 'Rome', 'Hamburg', 'Genoa', 'Naples', 'Bern']
+front=['Paris', 'Brussels', 'Madrid', 'Copenhagen', 'Amsterdam']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade', 'Prague', 'Berlin', 'Munich', 'Trieste', 'Rome', 'Hamburg', 'Genoa', 'Naples', 'Bern', 'Amsterdam']
+front=['Paris', 'Madrid', 'Copenhagen', 'Brussels']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade', 'Prague', 'Berlin', 'Munich', 'Trieste', 'Rome', 'Hamburg', 'Genoa', 'Naples', 'Bern', 'Amsterdam', 'Brussels']
+front=['Madrid', 'Paris', 'Copenhagen']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade', 'Prague', 'Berlin', 'Munich', 'Trieste', 'Rome', 'Hamburg', 'Genoa', 'Naples', 'Bern', 'Amsterdam', 'Brussels', 'Copenhagen']
+front=['Madrid', 'Paris']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade', 'Prague', 'Berlin', 'Munich', 'Trieste', 'Rome', 'Hamburg', 'Genoa', 'Naples', 'Bern', 'Amsterdam', 'Brussels', 'Copenhagen', 'Paris']
+front=['Madrid']
+his=['Warsaw', 'Budapest', 'Vienna', 'Belgrade', 'Prague', 'Berlin', 'Munich', 'Trieste', 'Rome', 'Hamburg', 'Genoa', 'Naples', 'Bern', 'Amsterdam', 'Brussels', 'Copenhagen', 'Paris', 'Madrid']
+front=['Lisbon']
+** Found!
+** 19 states visited, 0 still open
+Warsaw (0 km)
+Berlin (345 km)
+Hamburg (527 km)
+Amsterdam (865 km)
+Brussels (1029 km)
+Paris (1254 km)
+Madrid (2059 km)
+Lisbon (2398 km)
+()
+Warsaw --> Lisbon
+(using h3)
+front=['Warsaw']
+his=['Warsaw']
+front=['Budapest', 'Vienna', 'Prague', 'Berlin']
+his=['Warsaw', 'Berlin']
+front=['Bern', 'Budapest', 'Hamburg', 'Vienna', 'Prague']
+his=['Warsaw', 'Berlin', 'Prague']
+front=['Bern', 'Budapest', 'Hamburg', 'Vienna', 'Munich']
+his=['Warsaw', 'Berlin', 'Prague', 'Munich']
+front=['Rome', 'Amsterdam', 'Bern', 'Budapest', 'Hamburg', 'Vienna']
+his=['Warsaw', 'Berlin', 'Prague', 'Munich', 'Vienna']
+front=['Belgrade', 'Rome', 'Amsterdam', 'Trieste', 'Bern', 'Budapest', 'Hamburg']
+his=['Warsaw', 'Berlin', 'Prague', 'Munich', 'Vienna', 'Hamburg']
+front=['Belgrade', 'Rome', 'Copenhagen', 'Trieste', 'Amsterdam', 'Bern', 'Budapest']
+his=['Warsaw', 'Berlin', 'Prague', 'Munich', 'Vienna', 'Hamburg', 'Budapest']
+front=['Rome', 'Copenhagen', 'Belgrade', 'Trieste', 'Amsterdam', 'Bern']
+his=['Warsaw', 'Berlin', 'Prague', 'Munich', 'Vienna', 'Hamburg', 'Budapest', 'Bern']
+front=['Brussels', 'Madrid', 'Rome', 'Genoa', 'Copenhagen', 'Belgrade', 'Trieste', 'Amsterdam']
+his=['Warsaw', 'Berlin', 'Prague', 'Munich', 'Vienna', 'Hamburg', 'Budapest', 'Bern', 'Amsterdam']
+front=['Madrid', 'Rome', 'Genoa', 'Copenhagen', 'Belgrade', 'Brussels', 'Trieste']
+his=['Warsaw', 'Berlin', 'Prague', 'Munich', 'Vienna', 'Hamburg', 'Budapest', 'Bern', 'Amsterdam', 'Trieste']
+front=['Madrid', 'Rome', 'Copenhagen', 'Belgrade', 'Genoa', 'Brussels']
+his=['Warsaw', 'Berlin', 'Prague', 'Munich', 'Vienna', 'Hamburg', 'Budapest', 'Bern', 'Amsterdam', 'Trieste', 'Brussels']
+front=['Madrid', 'Rome', 'Copenhagen', 'Belgrade', 'Paris', 'Genoa']
+his=['Warsaw', 'Berlin', 'Prague', 'Munich', 'Vienna', 'Hamburg', 'Budapest', 'Bern', 'Amsterdam', 'Trieste', 'Brussels', 'Genoa']
+front=['Madrid', 'Rome', 'Copenhagen', 'Belgrade', 'Paris']
+his=['Warsaw', 'Berlin', 'Prague', 'Munich', 'Vienna', 'Hamburg', 'Budapest', 'Bern', 'Amsterdam', 'Trieste', 'Brussels', 'Genoa', 'Paris']
+front=['Madrid', 'Rome', 'Copenhagen', 'Belgrade']
+his=['Warsaw', 'Berlin', 'Prague', 'Munich', 'Vienna', 'Hamburg', 'Budapest', 'Bern', 'Amsterdam', 'Trieste', 'Brussels', 'Genoa', 'Paris', 'Belgrade']
+front=['Madrid', 'Rome', 'Copenhagen']
+his=['Warsaw', 'Berlin', 'Prague', 'Munich', 'Vienna', 'Hamburg', 'Budapest', 'Bern', 'Amsterdam', 'Trieste', 'Brussels', 'Genoa', 'Paris', 'Belgrade', 'Copenhagen']
+front=['Madrid', 'Rome']
+his=['Warsaw', 'Berlin', 'Prague', 'Munich', 'Vienna', 'Hamburg', 'Budapest', 'Bern', 'Amsterdam', 'Trieste', 'Brussels', 'Genoa', 'Paris', 'Belgrade', 'Copenhagen', 'Rome']
+front=['Naples', 'Madrid']
+his=['Warsaw', 'Berlin', 'Prague', 'Munich', 'Vienna', 'Hamburg', 'Budapest', 'Bern', 'Amsterdam', 'Trieste', 'Brussels', 'Genoa', 'Paris', 'Belgrade', 'Copenhagen', 'Rome', 'Madrid']
+front=['Naples', 'Lisbon']
+** Found!
+** 18 states visited, 1 still open
+Warsaw (0 km)
+Berlin (345 km)
+Hamburg (527 km)
+Amsterdam (865 km)
+Brussels (1029 km)
+Paris (1254 km)
+Madrid (2059 km)
+Lisbon (2398 km)
+()
+Warsaw --> Lisbon
+(using h4)
+front=['Warsaw']
+his=['Warsaw']
+front=['Prague', 'Budapest', 'Vienna', 'Berlin']
+his=['Warsaw', 'Berlin']
+front=['Bern', 'Hamburg', 'Prague', 'Budapest', 'Vienna']
+his=['Warsaw', 'Berlin', 'Vienna']
+front=['Belgrade', 'Trieste', 'Bern', 'Hamburg', 'Munich', 'Prague', 'Budapest']
+his=['Warsaw', 'Berlin', 'Vienna', 'Budapest']
+front=['Belgrade', 'Trieste', 'Bern', 'Hamburg', 'Munich', 'Prague']
+his=['Warsaw', 'Berlin', 'Vienna', 'Budapest', 'Prague']
+front=['Belgrade', 'Trieste', 'Bern', 'Hamburg', 'Munich']
+his=['Warsaw', 'Berlin', 'Vienna', 'Budapest', 'Prague', 'Munich']
+front=['Amsterdam', 'Rome', 'Belgrade', 'Trieste', 'Bern', 'Hamburg']
+his=['Warsaw', 'Berlin', 'Vienna', 'Budapest', 'Prague', 'Munich', 'Hamburg']
+front=['Copenhagen', 'Rome', 'Belgrade', 'Amsterdam', 'Trieste', 'Bern']
+his=['Warsaw', 'Berlin', 'Vienna', 'Budapest', 'Prague', 'Munich', 'Hamburg', 'Bern']
+front=['Brussels', 'Copenhagen', 'Genoa', 'Rome', 'Madrid', 'Belgrade', 'Amsterdam', 'Trieste']
+his=['Warsaw', 'Berlin', 'Vienna', 'Budapest', 'Prague', 'Munich', 'Hamburg', 'Bern', 'Trieste']
+front=['Brussels', 'Copenhagen', 'Madrid', 'Belgrade', 'Rome', 'Amsterdam', 'Genoa']
+his=['Warsaw', 'Berlin', 'Vienna', 'Budapest', 'Prague', 'Munich', 'Hamburg', 'Bern', 'Trieste', 'Genoa']
+front=['Paris', 'Brussels', 'Copenhagen', 'Madrid', 'Belgrade', 'Rome', 'Amsterdam']
+his=['Warsaw', 'Berlin', 'Vienna', 'Budapest', 'Prague', 'Munich', 'Hamburg', 'Bern', 'Trieste', 'Genoa', 'Amsterdam']
+front=['Paris', 'Copenhagen', 'Madrid', 'Belgrade', 'Rome', 'Brussels']
+his=['Warsaw', 'Berlin', 'Vienna', 'Budapest', 'Prague', 'Munich', 'Hamburg', 'Bern', 'Trieste', 'Genoa', 'Amsterdam', 'Brussels']
+front=['Copenhagen', 'Madrid', 'Belgrade', 'Rome', 'Paris']
+his=['Warsaw', 'Berlin', 'Vienna', 'Budapest', 'Prague', 'Munich', 'Hamburg', 'Bern', 'Trieste', 'Genoa', 'Amsterdam', 'Brussels', 'Paris']
+front=['Copenhagen', 'Belgrade', 'Rome', 'Madrid']
+his=['Warsaw', 'Berlin', 'Vienna', 'Budapest', 'Prague', 'Munich', 'Hamburg', 'Bern', 'Trieste', 'Genoa', 'Amsterdam', 'Brussels', 'Paris', 'Madrid']
+front=['Copenhagen', 'Belgrade', 'Lisbon', 'Rome']
+his=['Warsaw', 'Berlin', 'Vienna', 'Budapest', 'Prague', 'Munich', 'Hamburg', 'Bern', 'Trieste', 'Genoa', 'Amsterdam', 'Brussels', 'Paris', 'Madrid', 'Rome']
+front=['Copenhagen', 'Naples', 'Belgrade', 'Lisbon']
+** Found!
+** 16 states visited, 3 still open
+Warsaw (0 km)
+Berlin (345 km)
+Hamburg (527 km)
+Amsterdam (865 km)
+Brussels (1029 km)
+Paris (1254 km)
+Madrid (2059 km)
+Lisbon (2398 km)
+()
