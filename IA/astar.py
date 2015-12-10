@@ -21,7 +21,7 @@ def astar(c, l, start, end, hfunction):
     closed = []
     ope = [start]
     path = {}
-    score = {start: (0, hfunction(c[start], c[end]))}
+    score = {start: (hfunction(c[start], c[end]), 0)}
     while ope:
         current = min(ope, key=score.get)
         if current == end:
@@ -33,13 +33,13 @@ def astar(c, l, start, end, hfunction):
         for key, value in neigh.items():
             if key in closed:
                 continue
-            g = value + score[current][0]
+            g = value + score[current][1]
             if key not in ope:
                 ope.append(key)
-            elif g >= score[key][0]:
+            elif g >= score[key][1]:
                 continue
             path[key] = current
-            score[key] = (g, g + hfunction(c[key], c[end]))
+            score[key] = (g + hfunction(c[key], c[end]), g)
     return None
 
 
@@ -68,7 +68,8 @@ def main():
         with open('positions.txt', 'r') as fpos:
             cities, links = parseFiles(fconn, fpos)
     h = [dijkstra, dist_x, dist_y, euclid, manhattan]
-    start, end = 'Paris', 'Prague'
+    start, end = 'Warsaw', 'Lisbon'
+    # start, end = 'Brussels', 'Prague'
     for i in h:
         print('From {} to {}, with heuristic {}'.format(start, end, i.__name__))
         print(astar(cities, links, start, end, i))
