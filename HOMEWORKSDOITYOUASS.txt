@@ -17,6 +17,14 @@ tp4 compilo
 wiki!
 paramètres caméra (shutter time)
 simulateur de mouches sur natel
+
+vérifier capture écran natel (pixels)
+fichiers de config serveur et pi
+vérifier framerate/résolutions monochrome
+ajouter pushbutton start et stop pour la capture
+regarder avec t s'il peut faire en monochrome
+ajouter timestamp aux metadonnées des images
+
 <webgl>
 <android>
 wtf

@@ -12,12 +12,13 @@ password = 'pass'
 
 
 def getc(s):
-    username = 'user'
-    password = 'pass'
+    username = 'huge'
+    password = 'file'
     url = 'http://www.pythonchallenge.com/pc/' + s
+    print('fetching {}'.format(url))
     r = requests.get(url, auth=(username, password))  
     # page = r.content()
-    return r.content()
+    return r.content
 
 
 def fouslamerde(h):

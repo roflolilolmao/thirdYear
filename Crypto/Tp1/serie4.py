@@ -61,7 +61,7 @@ def inverse(n, m):
 
 
 def bezoutPrint(n, m):
-    printNumbers(a=a[0], b=a[1])
+    printNumbers(a=n, b=m)
     u, v, r = extendedGCD(n, m)
     print('Bezout coeffs are: u = {}, v = {}\nGCD = {}'.format(u, v, r))
 
@@ -138,5 +138,6 @@ if __name__ == '__main__':
     # ex4_1()
     # ex4_2()
     # ex4_3()
-    print(inverse(160, 353))
-    print(139 * 52 % 353)
+    # print(inverse(160, 353))
+    # print(139 * 52 % 353)
+    print(inverse(5, 72))
