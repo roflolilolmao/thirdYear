@@ -191,15 +191,15 @@ function loadRessources()
 {
     loadModel("ressources/earth.obj");
     
-    initTextureWithImage("ressources/texMap2k_Sun_main.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap2k_Sun_atmosphere.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap2k_Sun_main.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap2k_Sun_atmosphere.jpg", texColorTab);
     
-    initTextureWithImage("ressources/texMap4k_Mercury_main.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap4k_Mercury_normal.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap4k_Mercury_main.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap4k_Mercury_normal.jpg", texColorTab);
     
-    initTextureWithImage("ressources/texMap2k_Venus_main.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap2k_Venus_normal.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap2k_Venus_atmosphere.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap2k_Venus_main.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap2k_Venus_normal.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap2k_Venus_atmosphere.jpg", texColorTab);
     
     initTextureWithImage("ressources/texMap4k_Earth_main.jpg", texColorTab);
     initTextureWithImage("ressources/texMap4k_Earth_normal.jpg", texColorTab);
@@ -208,23 +208,23 @@ function loadRessources()
     initTextureWithImage("ressources/texMap4k_Earth_atmosphere.jpg", texColorTab);
     initTextureWithImage("ressources/texMap4k_Earth_atmosphere_normal.jpg", texColorTab);
     
-    initTextureWithImage("ressources/texMap4k_Mars_main.png", texColorTab);
-    initTextureWithImage("ressources/texMap2k_Mars_normal.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap2k_Mars_atmosphere.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap4k_Mars_main.png", texColorTab);
+    // initTextureWithImage("ressources/texMap2k_Mars_normal.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap2k_Mars_atmosphere.jpg", texColorTab);
     
-    initTextureWithImage("ressources/texMap4k_Jupiter_main.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap4k_Jupiter_normal.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap4k_Jupiter_atmosphere.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap4k_Jupiter_main.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap4k_Jupiter_normal.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap4k_Jupiter_atmosphere.jpg", texColorTab);
     
-    initTextureWithImage("ressources/texMap2k_Saturn_main.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap2k_Saturn_normal.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap2k_Saturn_atmosphere.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap2k_Saturn_main.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap2k_Saturn_normal.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap2k_Saturn_atmosphere.jpg", texColorTab);
     
-    initTextureWithImage("ressources/texMap2k_Uranus_main.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap2k_Uranus_atmosphere.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap2k_Uranus_main.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap2k_Uranus_atmosphere.jpg", texColorTab);
     
-    initTextureWithImage("ressources/texMap2k_Neptune_main.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap2k_Neptune_atmosphere.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap2k_Neptune_main.jpg", texColorTab);
+    // initTextureWithImage("ressources/texMap2k_Neptune_atmosphere.jpg", texColorTab);
     
 }
 function initWebGL()
