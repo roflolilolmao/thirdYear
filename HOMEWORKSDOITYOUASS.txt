@@ -17,7 +17,7 @@ tp4 compilo
 wiki!
 paramètres caméra (shutter time)
 simulateur de mouches sur natel
-
+w
 vérifier capture écran natel (pixels)
 fichiers de config serveur et pi
 vérifier framerate/résolutions monochrome
