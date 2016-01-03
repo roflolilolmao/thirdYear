@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Abel">
+		<link href='https://fonts.googleapis.com/css?family=Ubuntu' rel='stylesheet' type='text/css'>
+		<style>
+			header{
+				font-family: 'Ubuntu', sans-serif;
+				text-align:center;
+				margin-top: 3em;
+			}
+			html{
+				font-family: 'Abel', sans-serif;
+                text-align: justify;
+			}
+			article{
+				width: 75%;
+				margin-right: auto;
+				margin-left: auto;
+			}
+			span{
+				font-family: "Lucida Console", Monaco, monospace;
+			}
+			img{
+				display:block;
+				margin-left: auto;
+				margin-right: auto;
+                width:100%;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h2>TP2: a*</h2>
+			<p>Quentin Jeanmonod</p>
+		</header>
+		<article>
+			<header>
+				<h3>Heuristiques</h3>
+			</header>
+			<p>Parmis les 5 heuristiques proposées, seule la distance de Manhattan n'est pas admissible. En effet, c'est la seule qui peut surévaluer la distance réelle à parcourir avant d'atteindre l'objectif, puisque c'est la seule qui peut être plus grande que la distance à vol d'oiseau. L'heuristique de Manhattan est cependant utilisable dans certaines situations. Par exemple, sur une grille où l'on ne peut pas passer sur les diagonales.</p>
+            <p>Parmis ces 5 heuristique, la première est consistante car elle n'essaie simplement pas de s'approcher du but; c'est l'algorithme de Dijkstra, qui peut être utilisé si on a plusieurs objectifs et qu'on veut savoir lequel est le plus proche.</p>
+		</article>
+		<article>
+			<header>
+				<h3>Expérimentation</h3>
+			</header>
+			
+		</article>
+	</body>
+</html>

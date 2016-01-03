@@ -65,14 +65,13 @@ def dist_y(a, b):
 
 def printpath(path, links, i):
     print('From {} to {}, with heuristic {}'.format(path[0], path[len(path) - 1], i.__name__))
-    print(path)
     dist = 0
-    for n in range(len(path)):
-        wer = filter(lambda x: (x[0] == path[n] or x[1] == n) and
-                               (x[0] == path[n + 1] or x[1] == path[n + 1]), links)
-        print(wer)
-        dist += 0
-        print('{} : {} km'.format(n, dist))
+    print('{} : 0 km'.format(path[0]))
+    for n in range(1, len(path)):
+        wer = [x for x in links if (x[0] == path[n] or x[1] == path[n]) and
+               (x[0] == path[n - 1] or x[1] == path[n - 1])][0][2]
+        dist += int(wer)
+        print('{} : {} km'.format(path[n], dist))
 
 
 def main():
@@ -80,8 +79,8 @@ def main():
         with open('positions.txt', 'r') as fpos:
             cities, links = parseFiles(fconn, fpos)
     h = [dijkstra, dist_x, dist_y, euclid, manhattan]
-    start, end = 'Warsaw', 'Lisbon'
-    # start, end = 'Brussels', 'Prague'
+    # start, end = 'Warsaw', 'Lisbon'
+    start, end = 'Brussels', 'Prague'
     for i in h:
         path = astar(cities, links, start, end, i)
         printpath(path, links, i)

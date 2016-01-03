@@ -1,0 +1,6 @@
+from PIL import Image
+
+def isgrey(pixel):
+    return pixel[0] == pixel[1] == pixel[2]
+    
+print("".join(chr(val) for val in eval("".join(["".join([chr(Image.open("images/oxygen.png").getpixel((h, v))[0]) for v in range(0, Image.open("images/oxygen.png").height, 10) if isgrey(Image.open("images/oxygen.png").getpixel((0,v))) for h in range(0, Image.open("images/oxygen.png").width, 7) if isgrey(Image.open("images/oxygen.png").getpixel((h,v)))])[pos] for pos in range("".join([chr(Image.open("images/oxygen.png").getpixel((h, v))[0]) for v in range(0, Image.open("images/oxygen.png").height, 10) if isgrey(Image.open("images/oxygen.png").getpixel((0,v))) for h in range(0, Image.open("images/oxygen.png").width, 7) if isgrey(Image.open("images/oxygen.png").getpixel((h,v)))]).index("["), "".join([chr(Image.open("images/oxygen.png").getpixel((h, v))[0]) for v in range(0, Image.open("images/oxygen.png").height, 10) if isgrey(Image.open("images/oxygen.png").getpixel((0,v))) for h in range(0, Image.open("images/oxygen.png").width, 7) if isgrey(Image.open("images/oxygen.png").getpixel((h,v)))]).index("]") + 1)]))))
