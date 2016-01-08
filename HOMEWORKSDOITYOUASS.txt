@@ -6,7 +6,7 @@ welcome oblivion
 puscifer
 
 <!-- tests -->
-tdi
+
 <!-- devoirs -->
 tp3 os
 <!-- projects -->
@@ -26,6 +26,6 @@ ajouter timestamp aux metadonnées des images
 <android>
 <webdev>
 <JEE>
-CDC
+
 <c#>
 22janvier
