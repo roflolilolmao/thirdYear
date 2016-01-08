@@ -1,17 +1,14 @@
 ﻿<!-- most important -->
-listen dozer ghost things 
+dozer
+ghost
+stoned jesus
+welcome oblivion
+puscifer
 
 <!-- tests -->
-crypto 9 décembre
-te1 QL 11 décembre
-référentiel de test 1 
-éléments préliminaires importance qdl 1-2
-stratégie de test 1-2
-
+tdi
 <!-- devoirs -->
-crypto 25.11
-tp2 os
-tp4 compilo
+tp3 os
 <!-- projects -->
 <p3>
 white led
@@ -19,9 +16,7 @@ test (roll roll paper / smartphone thing)
 doc
 <webgl>
 <android>
-wtf
 <webdev>
-holyshit
 <JEE>
 CDC
 <c#>

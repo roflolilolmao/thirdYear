@@ -5,3 +5,5 @@ infographie/Video/*
 infographie/models/
 infographie/fig/
 infographie/Video/
+
+*/.idea/*
