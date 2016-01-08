@@ -1,3 +1,4 @@
+#!python3
 import math
 
 __author__ = 'Quentin'
@@ -64,15 +65,33 @@ def dist_y(a, b):
 
 
 def printpath(path, links, i):
-    print('From {} to {}, with heuristic {}'.format(path[0], path[len(path) - 1], i.__name__))
-    print(path)
+    print('From {} to {}, with heuristic {}, visited {} cities'.format(path[0], path[len(path) - 1], i.__name__, len(path)))
+    print('{} : 0 km'.format(path[0]))
     dist = 0
-    for n in range(len(path)):
-        wer = filter(lambda x: (x[0] == path[n] or x[1] == n) and
-                               (x[0] == path[n + 1] or x[1] == path[n + 1]), links)
-        print(wer)
-        dist += 0
-        print('{} : {} km'.format(n, dist))
+    for n in range(len(path) - 1):
+        wer = [x for x in links if (x[0] == path[n] or x[1] == path[n]) and
+               (x[0] == path[n + 1] or x[1] == path[n + 1])]
+        dist += int(wer[0][2])
+        print('{} : {} km'.format(path[n + 1], dist))
+
+
+def findUnadmissiblePaths(cities, links, h):
+    c = cities.keys()
+    for i in c:
+        for j in c:
+            if i != j:
+                paths = {}
+                unadmissible = False
+                for k in h:
+                    paths[k] = astar(cities, links, i, j, k)
+                for k, p in paths.items():
+                    for l, q in paths.items():
+                        if k != l and len(p) != len(q):
+                            unadmissible = True
+                if unadmissible:
+                    print('From {} to {}, an unadmissible path has been found'.format(i, j))
+                    for o, k in paths.items():
+                        printpath(k, links, o)
 
 
 def main():
@@ -80,11 +99,7 @@ def main():
         with open('positions.txt', 'r') as fpos:
             cities, links = parseFiles(fconn, fpos)
     h = [dijkstra, dist_x, dist_y, euclid, manhattan]
-    start, end = 'Warsaw', 'Lisbon'
-    # start, end = 'Brussels', 'Prague'
-    for i in h:
-        path = astar(cities, links, start, end, i)
-        printpath(path, links, i)
+    findUnadmissiblePaths(cities, links, h)
 
 
 if __name__ == '__main__':

@@ -152,11 +152,13 @@
                     }
                     else
                     {
-                        vec3 L = normalize((vLightpos - vPosition.xyz));
+                        vec3 L = normalize(tbn * (vLightpos - vPosition.xyz));
                         vec3 N = normalize(tbn * texelNormal);
                         float lambertTerm = dot(N, L);
+                        // gl_FragColor = vec4(lambertTerm, lambertTerm, lambertTerm, 1.0);
                         texelNight *= length(texelNight) / 1.5;
-                        nightColor = max(texelNight * (0.3 - lambertTerm), 0.0);
+                        
+                        nightColor = texelNight * (-2.0 * lambertTerm);
                         
                         color = frag(texelColor, texelNormal, texelSpecular);
                     }
@@ -200,5 +202,5 @@
                 </select>
         </aside>
     </body>
-    <script src='../js/mouseMotionHandling.js'></script>
+    <script src="../js/mouseMotionHandling.js"></script>
 </html>

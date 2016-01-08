@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Abel">
+		<link href='https://fonts.googleapis.com/css?family=Ubuntu' rel='stylesheet' type='text/css'>
+		<style>
+			header{
+				font-family: 'Ubuntu', sans-serif;
+				text-align:center;
+				margin-top: 3em;
+			}
+			html{
+				font-family: 'Abel', sans-serif;
+                text-align: justify;
+			}
+			article{
+				width: 75%;
+				margin-right: auto;
+				margin-left: auto;
+			}
+			span{
+				font-family: "Lucida Console", Monaco, monospace;
+			}
+			img{
+				display:block;
+				margin-left: auto;
+				margin-right: auto;
+                width:100%;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h2>TP A*</h2>
+			<p>Quentin Jeanmonod</p>
+		</header>
+		<article>
+			<header>
+				<h3>Heuristiques</h3>
+			</header>
+			<p>La définition d'une heuristique admissible est qu'elle ne doit jamais surestimer la distance à parcourir. Puisque la distance la plus courte possible entre 2 points est la distance euclidienne, l'heuristique ne doit donc pas être plus grande que cette distance. Ainsi, parmis les 5 heuristiques que l'on utilise dans ce TP, seule la distance de Manhattan n'est pas admissible, puisque c'est la seule qui peut être plus grande que la distance euclidienne.</p>
+            <p>Pour qu'une heuristique soit consistante, elle doit estimer la distance d'un point à une valeur plus petite ou égale à l'heuristique du voisin suivant plus le coût pour aller à ce voisin. Autrement dit, une heuristique consistante doit avoir tendance à s'approcher du but. Ainsi, une heuristique qui ne prend pas en compte la totalié du chemin à parcourir ne peut pas être consistant. Par exemple, on ne peut pas regarder seulement la distance en x ou en y, car on ne prend pas en compte la "moitié" du chemin. Du coup, seule les distances euclidiennes et de manhattan sont consistantes.</p>
+		</article>
+		<article>
+			<header>
+				<h3>Expérimentation</h3>
+			</header>
+			<p>L'utilisation d'heuristiques différentes a bien entendu une influence sur l'efficacité de la recherche. En terme de rapidité, une heuristique consistante sera toujours plus rapide qu'une autre. En effet, si les noeuds visités s'approchent toujours du but, alors on trouvera plus rapidement un chemin que sinon.</p>
+            <p>Une heuristique non-admissible peut trouver un chemin qui n'est pas optimal. Dans ce TP, l'heuristique de Manhattan est la seule heuristique non-admissible et, en essayant tous les chemins possibles avec les 5 heuristiques différentes, elle donne en effet quelque fois un chemin non-optimal. C'est à dire entre Paris et Prague, Bruxelle et Prague et entre Amsterdam et Prague. Dans ces 3 cas, l'heuristique de Manhattan passe par une ville suplémentaire que les autres.</p>
+            <p>Dans un cas réel, j'utiliserais l'heuristique euclidienne. En effet, c'est la seule qui est à la fois admissible et consistante. Ce sera donc un bon compromis pour avoir une bonne rapidité de recherche et pour trouver le meilleur chemin.</p>
+        </article>
+	</body>
+</html>

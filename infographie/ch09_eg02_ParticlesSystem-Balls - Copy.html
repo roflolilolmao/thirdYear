@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec2 aTextureCoord;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			varying vec2 vTextureCoord;
+			void main(void) {
+				vTextureCoord = aTextureCoord;
+				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+			precision highp float;
+			#endif
+			uniform sampler2D uColorTexture;
+			varying vec2 vTextureCoord;
+			void main(void) {
+				vec2 mapCoord = vec2(vTextureCoord.s, vTextureCoord.t);
+				vec4 texelColor = texture2D(uColorTexture, mapCoord);
+				gl_FragColor = texelColor.rgba;
+			}
+		</script>
+		<script>
+			var vertexBuffer = null;
+			var indexBuffer = null;
+			var textCoordsBuffer = null;
+			var texColorTab = new Array();
+			var indices = [];
+			var vertices = [];
+			var textCoords =[];
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();
+			function signedRandom(){
+				return Math.random()*2.0 - 1.0;
+			}
+			const PARTICLES = 40;
+			const maxX = 14.0;
+			const minX = -maxX;
+			const maxY = 10.0;
+			const minY = -maxY;
+			const maxSpeed = 0.1;
+			const FACK_GRAVITY = -0.005;
+			const particleRadius = 2.0;
+			var elasticity = 0.5;
+			var detectCollisions = true;
+			var elasticCollisions = true;
+			var squaredParticleRadius = particleRadius * particleRadius;
+			var particlePositions = new Array();
+			var particleVelocities = new Array();
+			function initParticles(){
+				var z = -20.0;
+				for (var p = 0; p < PARTICLES; p++){
+					var vx = maxSpeed * signedRandom();
+					var vy = maxSpeed * signedRandom();
+					particleVelocities.push([vx,vy]);
+					var x = maxX * signedRandom();
+					var y = maxY * signedRandom();
+					particlePositions.push([x, y, z+p*0.001]);
+				}
+			}
+			function clampSpeed(valueToClamp, particleSpeed){
+				if (!elasticCollisions){
+					particleSpeed = particleSpeed * elasticity;
+				}
+				return Math.max(-particleSpeed, Math.min(particleSpeed, valueToClamp));
+			}
+			function collisionDetection(particleIndx){
+				var bounceVector = [0,0];
+				var collisionDetected = false;
+				var particlePos = particlePositions[particleIndx];
+				for (var p = 0; p < PARTICLES; p++){
+					if (p != particleIndx){
+						var otherPos = particlePositions[p];
+						var dx = particlePos[0] - otherPos[0];
+						var dy = particlePos[1] - otherPos[1];
+						squaredEuclideanDistance = dx*dx + dy*dy ;
+						if (squaredEuclideanDistance <= squaredParticleRadius){
+							collisionDetected = true;
+							bounceVector[0] += dx;
+							bounceVector[1] += dy;
+						}
+					}
+				}
+				if (collisionDetected){
+					particleVelocity = particleVelocities[particleIndx];
+					bounceVector = [clampSpeed(bounceVector[0], Math.abs(particleVelocity[0])),
+									clampSpeed(bounceVector[1], Math.abs(particleVelocity[1]))];
+					particleVelocities[particleIndx] = bounceVector;
+				}
+			}
+			function toggleCollisions(){
+				detectCollisions = !detectCollisions;
+			}
+			function toggleElasticity(){
+				elasticCollisions = !elasticCollisions;
+			}
+			function setElasticity(){
+				elasticity = document.getElementById("sliderElasticity").value / 100.0;
+			}
+			function animateParticles(){
+				for (var p = 0; p < PARTICLES; p++){
+					velocity = particleVelocities[p];
+					position = particlePositions[p];
+					velocity[1] += FACK_GRAVITY;
+					position = [position[0] + velocity[0], position[1] + velocity[1], position[2]];
+					if (position[0] > maxX ){
+						velocity[0] = -velocity[0];
+						position[0] = maxX;
+					}
+					if(position[0] < minX){
+						velocity[0] = -velocity[0];
+						position[0] = minX;
+					}
+					if (position[1] > maxY ){
+						velocity[1] = -velocity[1];
+						position[1] = maxY;
+					}
+					if(position[1] < minY){
+						velocity[1] = -velocity[1];
+						position[1] = minY;
+					}
+					particleVelocities[p] = velocity;
+					particlePositions[p] = position;
+					if (detectCollisions){
+						collisionDetection(p);
+					}
+				}
+			}
+			function initShaderParameters(prg){
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				prg.textureCoordsAttribute  = glContext.getAttribLocation(prg, "aTextureCoord");
+				glContext.enableVertexAttribArray(prg.textureCoordsAttribute);
+				prg.pMatrixUniform          = glContext.getUniformLocation(prg, 'uPMatrix');
+				prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
+				prg.uColorTexture 			= glContext.getUniformLocation(prg, "uColorTexture");
+			}
+			function initBuffers(){
+				vertices = [ -1.0, -1.0, 0.0,
+							  1.0, -1.0, 0.0,
+							 -1.0,  1.0, 0.0,
+							  1.0,  1.0, 0.0 ];
+				indices = [ 0, 1, 2, 3 ];
+				textCoords = [  0.0, 0.0,
+								1.0, 0.0,
+								0.0, 1.0,
+								1.0, 1.0 ];
+				vertexBuffer     = getArrayBufferWithArray(vertices);
+				indexBuffer      = getIndexBufferWithIndices(indices);
+				textCoordsBuffer = getArrayBufferWithArray(textCoords);
+			}
+			function drawScene(){
+				glContext.enable(glContext.DEPTH_TEST);
+				glContext.clearColor(0.2, 0.2, 0.2, 1.0);
+				glContext.enable(glContext.BLEND);
+				glContext.blendFunc(glContext.SRC_ALPHA, glContext.ONE);
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				glContext.viewport( 0.0, 0.0, c_width, c_height);
+				mat4.perspective(pMatrix, degToRad(60), c_width / c_height, 0.1, 1000.0);
+				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
+				glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
+				glContext.activeTexture(glContext.TEXTURE0);
+				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[0]);
+				glContext.uniform1i(prg.uColorTexture, 0);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+				animateParticles();
+				for(var b = 0; b < PARTICLES; b++){
+					mat4.identity(mvMatrix);
+					var particlePos = particlePositions[b];
+					mat4.translate(mvMatrix, mvMatrix, particlePos);
+					glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
+					glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+				}
+			}
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				initParticles();
+				initProgram();
+				initBuffers();
+				initTextureWithImage( "fig/pinkBall.png", texColorTab );
+				renderLoop();
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<script>displayTitle("Ch.09 E.g.2 : Systèmes de particules", 1,1,1,1,1,1,1);</script>
+		<p>Particules avec détection de collisions et rebonds sur un même plan.</p>
+		<p>
+		<input id="collsionsCheckBox" type="checkbox" checked="checked" onchange="toggleCollisions()">Détection de collisions</input>
+		</p>
+		<p>
+		<input id="elasticityCheckBox" type="checkbox" checked="checked" onchange="toggleElasticity()">Collisions élastiques (pas de perte d'énergie)</input>
+		</p>
+		<p>
+		Élasticité:  0%<input type="range" id="sliderElasticity" value="90" min="0" max="200" onChange="setElasticity();">200%
+		</p>
+		<canvas id="webgl-canvas" width="800" height="600">
+			HTML5 is not supported
+		</canvas>
+		<script>
+			document.getElementById("collsionsCheckBox").checked = true;
+			document.getElementById("elasticityCheckBox").checked = true;
+			document.getElementById("sliderElasticity").value = elasticity*100;
+		</script>
+	</body>
+</html>
