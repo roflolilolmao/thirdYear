@@ -2,22 +2,15 @@ import sys
 import cv2
 import numpy as np
 import urllib2
-import requests
 import struct
 import binascii
-
-
-username = 'user'
-password = 'pass'
+import requests
 
 
 def getc(s):
-    username = 'huge'
-    password = 'file'
     url = 'http://www.pythonchallenge.com/pc/' + s
     print('fetching {}'.format(url))
-    r = requests.get(url, auth=(username, password))  
-    # page = r.content()
+    r = requests.get(url, auth=('huge', 'file'))
     return r.content
 
 
@@ -50,7 +43,6 @@ def e11():
 
 
 def e12fuck(fil, n):
-    # dis pro port ional /ity
     with open(fil, 'rb') as f:
         t = f.read()
         value = [struct.unpack('B', t[i])[0] for i in range(len(t))]
@@ -67,7 +59,8 @@ def e12():
 
 def e13():
     bert = '22337778'
-    p = getc('return/bert.html')
+    evil = '33888444555'
+    p = getc('return/evil4.jpg')
     print(p)
 
 

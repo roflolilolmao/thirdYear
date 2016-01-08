@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="css/stylesheet.css">
+		<script src="js/commonFunctions.js"></script>
+		<script src="js/gl-matrix-min.js"></script>
+		<script src="js/webglTools.js"></script>
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec2 aTextureCoord;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			varying vec2 vTextureCoord;
+			void main(void) {
+				vTextureCoord = aTextureCoord;
+				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+			}
+		</script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+			precision highp float;
+			#endif
+			uniform sampler2D uColorTexture;
+			uniform int uHeat;
+			varying vec2 vTextureCoord;
+			void main(void) {
+				vec2 mapCoord = vec2(vTextureCoord.s, vTextureCoord.t);
+				vec4 texelColor = texture2D(uColorTexture, mapCoord);
+				texelColor.r *= (float(uHeat)/255.0);
+				texelColor.g *= 0.5;
+				texelColor.b *= (1.0-float(uHeat)/255.0);
+				gl_FragColor = texelColor.rgba;
+			}
+		</script>
+		<script>
+			var vertexBuffer = null;
+			var indexBuffer = null;
+			var textCoordsBuffer = null;
+			var heatBuffer = null;
+			var texColorTab = new Array();
+			var indices = [];
+			var vertices = [];
+			var textCoords =[];
+			var mvMatrix = mat4.create();
+			var pMatrix = mat4.create();
+			function signedRandom(){
+				return Math.random()*2.0 - 1.0;
+			}
+			function signedCentralRandom(){
+				var value = (signedRandom()+signedRandom()+signedRandom())/3.0;
+				console.log( value );
+				return value;
+			}
+			const PARTICLES = 1000;
+			const maxX = 15.0;
+			const minX = -maxX;
+			const maxY = 15.0;
+			const minY = -maxY;
+			const MAX_VELOCITY = 0.20;
+			const GRAV_CONST = 0.02;
+			const particleRadius = 0.15;
+			var remainingEnergyAtCollision = 0.1;
+			const COOL_DOWN_VALUE = 3.0;
+			const COLLISION_HEATING_EFFECT = 30.0;
+			var detectCollisions = true;
+			var usingGravity = true;
+			var squaredParticleRadius = particleRadius * particleRadius;
+			var particlePositions = new Array();
+			var particleVelocities = new Array();
+			var particleHeats = new Array();
+			function initParticles(){
+				var z = -20.0;
+				for (var p = 0; p < PARTICLES; p++){
+					var vx = 0.0;
+					var vy = 0.0;
+					particleVelocities.push([vx,vy]);
+					var x = maxX * signedCentralRandom();
+					var y = maxY * signedCentralRandom();
+					particlePositions.push([x, y, z+p*0.001]);
+					particleHeats.push(0.0);
+				}
+			}
+			function clampSpeed(valueToClamp, particleSpeed){
+				particleSpeed = particleSpeed * remainingEnergyAtCollision;
+				particleSpeed = particleSpeed > MAX_VELOCITY ? MAX_VELOCITY : particleSpeed;
+				return Math.max(-particleSpeed, Math.min(particleSpeed, valueToClamp));
+			}
+			function gravityEffects( particleIndx ) {
+				var particlePos = particlePositions[particleIndx];
+				var particleVel = particleVelocities[particleIndx];
+				var dx=0.0, dy=0.0, distance=0.0;
+				for (var p = 0; p < PARTICLES; ++p){
+					if (p != particleIndx){
+						var otherPos = particlePositions[p];
+						dx = otherPos[0]-particlePos[0];
+						dy = otherPos[1]-particlePos[1];
+						distance = Math.sqrt(dx*dx+dy*dy);
+						var influence = [	clampSpeed(GRAV_CONST*dx/(distance*distance), MAX_VELOCITY),
+											clampSpeed(GRAV_CONST*dy/(distance*distance), MAX_VELOCITY)];
+						particleVelocities[particleIndx] = [particleVel[0]+influence[0], particleVel[1]+influence[1]];
+					}
+				}
+			}
+			function increaseHeat(particleIndx, value){
+				if( particleHeats[particleIndx]+value < 255.0) particleHeats[particleIndx] = particleHeats[particleIndx] +value;
+				else particleHeats[particleIndx] = 255.0;
+			}
+			function decreaseHeat(particleIndx, value){
+				if( particleHeats[particleIndx]-value > 0.0) particleHeats[particleIndx] = particleHeats[particleIndx]-value;
+				else particleHeats[particleIndx]= 0.0;
+			}
+			function coolDown(particleIndx){
+				if( particleHeats[particleIndx]-COOL_DOWN_VALUE > 0.0) particleHeats[particleIndx] = particleHeats[particleIndx]-COOL_DOWN_VALUE;
+				else particleHeats[particleIndx]=0.0;
+			}
+			function collisionDetection(particleIndx){
+				var bounceVector = [0,0];
+				var collisionDetected = false;
+				var particlePos = particlePositions[particleIndx];
+				for (var p = 0; p < PARTICLES; ++p){
+					if (p != particleIndx){
+						var otherPos = particlePositions[p];
+						var dx = particlePos[0] - otherPos[0];
+						var dy = particlePos[1] - otherPos[1];
+						squaredEuclideanDistance = dx*dx + dy*dy ;
+						if (squaredEuclideanDistance <= squaredParticleRadius){
+							collisionDetected = true;
+							bounceVector[0] += dx;
+							bounceVector[1] += dy;
+						}
+					}
+				}
+				if (collisionDetected){
+					particleVelocity = particleVelocities[particleIndx];
+					bounceVector = [clampSpeed(bounceVector[0], Math.abs(particleVelocity[0])),
+									clampSpeed(bounceVector[1], Math.abs(particleVelocity[1]))];
+					particleVelocities[particleIndx] = bounceVector;
+					increaseHeat(particleIndx, COLLISION_HEATING_EFFECT);
+				}
+			}
+			function toggleCollisions(){
+				detectCollisions = !detectCollisions;
+			}
+			function setRemainingEnergyAfterCol(){
+				remainingEnergyAtCollision = document.getElementById("sliderElasticity").value / 100.0;
+			}
+			function animateParticles(){
+				for (var p = 0; p < PARTICLES; ++p){
+					velocity = particleVelocities[p];
+					position = particlePositions[p];
+					position = [position[0] + velocity[0], position[1] + velocity[1], position[2]];
+					particleVelocities[p] = velocity;
+					particlePositions[p] = position;
+					if( detectCollisions ){
+						collisionDetection(p);
+					}
+					if( usingGravity ){
+						gravityEffects(p);
+					}
+					coolDown(p);
+				}
+			}
+			function initShaderParameters(prg){
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				prg.textureCoordsAttribute  = glContext.getAttribLocation(prg, "aTextureCoord");
+				glContext.enableVertexAttribArray(prg.textureCoordsAttribute);
+				prg.pMatrixUniform          = glContext.getUniformLocation(prg, 'uPMatrix');
+				prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
+				prg.uColorTexture 			= glContext.getUniformLocation(prg, "uColorTexture");
+				prg.heatAttribute 			= glContext.getUniformLocation(prg, "uHeat");
+			}
+			function initBuffers(){
+				vertices = [ -particleRadius, -particleRadius, 0.0,
+							  particleRadius, -particleRadius, 0.0,
+							 -particleRadius,  particleRadius, 0.0,
+							  particleRadius,  particleRadius, 0.0 ];
+				indices = [ 0, 1, 2, 3 ];
+				textCoords = [  0.0, 0.0,
+								1.0, 0.0,
+								0.0, 1.0,
+								1.0, 1.0 ];
+				vertexBuffer     = getArrayBufferWithArray(vertices);
+				indexBuffer      = getIndexBufferWithIndices(indices);
+				textCoordsBuffer = getArrayBufferWithArray(textCoords);
+				heatBuffer       = getIndexBufferWithIndices( particleHeats );
+			}
+			function drawScene(){
+				glContext.clearColor(0.0, 0.0, 0.0, 1.0);
+				glContext.enable(glContext.DEPTH_TEST);
+				glContext.enable(glContext.BLEND);
+				glContext.blendFunc(glContext.SRC_ALPHA, glContext.ONE);
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				glContext.viewport( 0.0, 0.0, c_width, c_height);
+				mat4.perspective(pMatrix, degToRad(60), c_width / c_height, 0.1, 1000.0);
+				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
+				glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
+				glContext.activeTexture(glContext.TEXTURE0);
+				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[0]);
+				glContext.uniform1i(prg.uColorTexture, 0);
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+				animateParticles();
+				for(var b = 0; b < PARTICLES; b++){
+					mat4.identity(mvMatrix);
+					var particlePos = particlePositions[b];
+					mat4.translate(mvMatrix, mvMatrix, particlePos);
+					glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
+					glContext.uniform1i(prg.heatAttribute, particleHeats[b]);
+					glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+				}
+			}
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				initParticles();
+				initProgram();
+				initBuffers();
+				initTextureWithImage( "fig/particle.png", texColorTab );
+				renderLoop();
+			}
+		</script>
+	</head>
+	<body onload="initWebGL()">
+		<script>displayTitle("Ch.09 Ex.1 : Système de Particules avec gravité", 1,1,1,1,1,1,1);</script>
+		<p>Particules avec détection de collisions et rebonds sur un même plan.</p>
+		<p>
+		<input id="collsionsCheckBox" type="checkbox" checked="checked" onchange="toggleCollisions()">Détection de collisions</input>
+		</p>
+		<p>
+		Energie restante après collision :  0%<input type="range" id="sliderElasticity" value="50" min="0" max="100" onChange="setRemainingEnergyAfterCol();">200%
+		</p>
+		<canvas id="webgl-canvas" width="800" height="600">
+			HTML5 is not supported
+		</canvas>
+		<script>
+			document.getElementById("collsionsCheckBox").checked = true;
+			document.getElementById("sliderElasticity").value = remainingEnergyAtCollision*100;
+		</script>
+	</body>
+</html>

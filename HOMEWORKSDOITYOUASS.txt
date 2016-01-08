@@ -11,17 +11,9 @@ puscifer
 tp3 os
 <!-- projects -->
 <p3>
-wiki!
-paramètres caméra (shutter time)
-simulateur de mouches sur natel
-w
-vérifier capture écran natel (pixels)
-fichiers de config serveur et pi
-vérifier framerate/résolutions monochrome
-ajouter pushbutton start et stop pour la capture
-regarder avec t s'il peut faire en monochrome
-ajouter timestamp aux metadonnées des images
-
+white led
+test (roll roll paper / smartphone thing)
+doc
 <webgl>
 <android>
 <webdev>
