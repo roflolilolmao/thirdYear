@@ -12,24 +12,25 @@
         <script src="planet.js"></script>
         <script id="shader-vs" type="x-shader/x-vertex">
             const vec3 lightpos = vec3(0.0, 0.0, 0.0);
+            
             attribute vec3 aVertexPosition;
             attribute vec2 aTextureCoord;
+            
+            // Camera
             uniform mat4 uMVMatrix;
             uniform mat4 uPMatrix;
             uniform mat4 uNMatrix;
-            uniform vec3 center;
-            uniform float radius;
-            
-            uniform float rotation;
             uniform vec3 offset;
             
+            // Celestial body info
+            uniform vec3 center;
+            uniform float radius;
+            uniform float rotation;
             uniform float inclination;
             
             varying vec3 vLightpos;
             varying vec2 vTextureCoord;
             varying vec4 vPosition;
-            varying vec3 vNormal;
-            varying vec3 vCenter;
             varying mat3 tbn;
             
             // source http://www.geeks3d.com/20141201/how-to-rotate-a-vertex-by-a-quaternion-in-glsl/
@@ -69,24 +70,30 @@
             }
             void main(void)
             {
+                // Rotation
                 vec3 vertex = rotate_vertex_position(aVertexPosition, vec3(0.0, 1.0, 0.0), rotation * 360.0);
+                // Inclination
                 vec3 position = rotate_vertex_position(vertex * radius, vec3(1.0, 0.0, 0.0), 90.0 - inclination);
-                vPosition = uMVMatrix * vec4(position + center + offset, 1.0);
-                gl_Position = uPMatrix * vPosition;
-                vTextureCoord = aTextureCoord;
-                vNormal = normalize((uNMatrix * vec4(position, 1.0)).xyz);
-                vLightpos = (uMVMatrix * vec4(lightpos, 1.0)).xyz;              
-                vCenter = (uMVMatrix * vec4(center, 1.0)).xyz;              
                 
+                vTextureCoord = aTextureCoord;
+                vLightpos = (uMVMatrix * vec4(lightpos + offset, 1.0)).xyz;              
+                
+                // TBN matrix for normals
+                vec3 normal = normalize((uNMatrix * vec4(position, 1.0)).xyz);
                 float theta = acos(position.z / radius) + 3.14159 / 2.0;
                 float phi = atan(position.y, position.x);
-                vec3 tangent = normalize((uNMatrix * vec4(
+                vec3 tangent = normalize((uNMatrix * 
+                    vec4(
                         sin(theta) * cos(phi) * radius,
                         sin(theta) * sin(phi) * radius, 
-                        cos(theta) * radius
-                    , 1.0)).xyz);
-                vec3 bitangent = normalize(cross(vNormal, tangent));
-                tbn = mat3(tangent, bitangent, vNormal);
+                        cos(theta) * radius, 
+                        1.0
+                    )).xyz);
+                vec3 bitangent = normalize(cross(normal, tangent));
+                tbn = mat3(tangent, bitangent, normal);
+                
+                vPosition = uMVMatrix * vec4(position + center + offset, 1.0);
+                gl_Position = uPMatrix * vPosition;
                 
                 // http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-13-normal-mapping/
             }
@@ -95,26 +102,25 @@
             #ifdef GL_ES
                 precision highp float;
             #endif
-            const float alpha = 16.0;
+            const float alpha = 32.0;
+            // textures
             uniform sampler2D uColorTexture;
             uniform sampler2D uNormalTexture;
             uniform sampler2D uSpecularTexture;
             uniform sampler2D uEarthNight;
             uniform sampler2D uAtmosphere;
             uniform sampler2D uAtmosphereNormals;
-            uniform vec3 center;
-            uniform float radius;
-            uniform float rotationAtmo;
+            
+            // different bodies need different drawing modes
             uniform int fmode;
+            
+            uniform float rotationAtmo;
             varying vec3 vLightpos;
             varying vec2 vTextureCoord;
             varying vec4 vPosition;
-            varying vec3 vNormal;
-            varying vec3 vCenter;
             varying mat3 tbn;
-            vec3 frag(vec3 color, vec3 normal, vec3 specularMap)
+            vec3 colorFromTextures(vec3 color, vec3 normal, vec3 specularMap, vec3 L)
             {
-                vec3 L = normalize((vLightpos - vCenter.xyz));
                 vec3 N = normalize(tbn * normal);
                 float lambertTerm = max(dot(N, L), 0.0);
                 
@@ -129,44 +135,49 @@
                 return finalColor;
             }
             void main(void) {
+                // Atmosphere 
                 vec2 offsetAtmo = vec2(rotationAtmo, 0.0);
                 vec2 coordAtmo = vec2(vTextureCoord.s, vTextureCoord.t);
                 coordAtmo += offsetAtmo;
                 if(coordAtmo.x > 1.0) coordAtmo.x -= 1.0;
+                
                 vec3 texelColor = texture2D(uColorTexture, vTextureCoord).rgb;
                 if(fmode == 1) // earth
                 {
-                    vec3 texelNormal = texture2D(uNormalTexture, vTextureCoord).rgb * 2.0 - 1.0;
-                    vec3 texelSpecular = texture2D(uSpecularTexture, vTextureCoord).rgb;
-                    vec3 texelNight = texture2D(uEarthNight, vTextureCoord).rgb;
                     vec3 texelAtmo = texture2D(uAtmosphere, coordAtmo).rgb;
-                    vec3 texelAtmoNormal = texture2D(uAtmosphereNormals, coordAtmo).rgb * 2.0 - 1.0;
+                    vec3 L = normalize(vLightpos - vPosition.xyz);
                     
                     vec3 color;
-                    vec3 nightColor;
+                    vec3 nightColor = vec3(0.0, 0.0, 0.0);
                     if(texelAtmo.r > 0.75)
-                    {
-                        nightColor = vec3(0.0, 0.0, 0.0);
-                        
-                        color = frag(texelAtmo, texelAtmoNormal, vec3(1.0, 1.0, 1.0));
+                    {                        
+                        // clouds
+                        vec3 texelAtmoNormal = texture2D(uAtmosphereNormals, coordAtmo).rgb * 2.0 - 1.0;
+                        color = colorFromTextures(texelAtmo, texelAtmoNormal, vec3(1.0, 1.0, 1.0), L);
                     }
                     else
                     {
-                        vec3 L = normalize(tbn * (vLightpos - vPosition.xyz));
+                        // ground
+                        vec3 texelNormal = texture2D(uNormalTexture, vTextureCoord).rgb * 2.0 - 1.0;
                         vec3 N = normalize(tbn * texelNormal);
                         float lambertTerm = dot(N, L);
-                        // gl_FragColor = vec4(lambertTerm, lambertTerm, lambertTerm, 1.0);
-                        texelNight *= length(texelNight) / 1.5;
-                        
-                        nightColor = texelNight * (-2.0 * lambertTerm);
-                        
-                        color = frag(texelColor, texelNormal, texelSpecular);
+                        if (lambertTerm < 0.2)
+                        {
+                            vec3 texelNight = texture2D(uEarthNight, vTextureCoord).rgb;
+                            float fade = lambertTerm > 0.0 ? 1.0 - lambertTerm * 5.0 : 1.0;
+                            nightColor = texelNight * length(texelNight) * fade / 1.5;
+                        }
+                        if (lambertTerm > 0.0)
+                        {
+                            vec3 texelSpecular = texture2D(uSpecularTexture, vTextureCoord).rgb;
+                            color = colorFromTextures(texelColor, texelNormal, texelSpecular, L);
+                        }
                     }
                     color += nightColor;
                     
                     gl_FragColor = vec4(color, 1.0);
                 }
-                else
+                else // sol
                 {
                     gl_FragColor = vec4(texelColor.xyz, 1.0);  
                 }
