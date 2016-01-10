@@ -29,6 +29,7 @@
             uniform float inclination;
             
             varying vec3 vLightpos;
+            varying vec3 sun;
             varying vec2 vTextureCoord;
             varying vec4 vPosition;
             varying mat3 tbn;
@@ -75,8 +76,8 @@
                 // Inclination
                 vec3 position = rotate_vertex_position(vertex * radius, vec3(1.0, 0.0, 0.0), 90.0 - inclination);
                 
-                vTextureCoord = aTextureCoord;
-                vLightpos = (uMVMatrix * vec4(lightpos + offset, 1.0)).xyz;              
+                vLightpos = (uMVMatrix * vec4(lightpos + offset, 1.0)).xyz;
+                vTextureCoord = aTextureCoord;            
                 
                 // TBN matrix for normals
                 vec3 normal = normalize((uNMatrix * vec4(position, 1.0)).xyz);
@@ -95,6 +96,7 @@
                 vPosition = uMVMatrix * vec4(position + center + offset, 1.0);
                 gl_Position = uPMatrix * vPosition;
                 
+                vec3 sun = -offset;
                 // http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-13-normal-mapping/
             }
         </script>
@@ -115,7 +117,9 @@
             uniform int fmode;
             
             uniform float rotationAtmo;
+            
             varying vec3 vLightpos;
+            varying vec3 sun;
             varying vec2 vTextureCoord;
             varying vec4 vPosition;
             varying mat3 tbn;
@@ -134,10 +138,11 @@
                 
                 return finalColor;
             }
-            void main(void) {
-                // Atmosphere 
+            void main(void)
+            {
+                // Atmosphere
                 vec2 offsetAtmo = vec2(rotationAtmo, 0.0);
-                vec2 coordAtmo = vec2(vTextureCoord.s, vTextureCoord.t);
+                vec2 coordAtmo = vTextureCoord;
                 coordAtmo += offsetAtmo;
                 if(coordAtmo.x > 1.0) coordAtmo.x -= 1.0;
                 
@@ -175,11 +180,110 @@
                     }
                     color += nightColor;
                     
-                    gl_FragColor = vec4(color, 1.0);
+                    float dotNormalLight = dot(normalize(tbn[2]), L);
+                    float dotNormalEye = dot(normalize(tbn[2]), normalize((-vPosition.xyz)));
+                    vec3 atmo;
+                    float sqne = sqrt(dotNormalEye * 5.0);
+                    if(dotNormalLight > 0.2)
+                    {
+                        atmo = vec3(
+                                sqne * 6.0 - 5.0,
+                                sqne * 6.0 - 5.0,
+                                sqne
+                            );
+                    }
+                    else if(dotNormalLight < -0.2)
+                    {
+                        atmo = vec3(0.0, 0.0, 0.0);
+                    }
+                    else if(dotNormalLight > 0.0)
+                    {
+                        float sqnl = 0.5 * sqrt(1.0 - dotNormalLight * 5.0);
+                        float factor = 5.0 * dotNormalLight;
+                        atmo = (1.0 - factor) * vec3(
+                                sqne * sqnl * 0.8,
+                                sqne * sqnl * 0.15,
+                                0.0
+                            );
+                        atmo += factor * vec3(
+                                sqne * 6.0 - 5.0,
+                                sqne * 6.0 - 5.0,
+                                sqne
+                            );
+                    }
+                    else
+                    {
+                        float sqnl = 0.5 - sqrt(-dotNormalLight * 5.0);
+                        atmo = vec3(
+                                sqne * sqnl * 0.8,
+                                sqne * sqnl * 0.15,
+                                0.0
+                            );
+                    }
+                    float dotEyeLight = dot(normalize((-vPosition.xyz)), L);
+                    if(dotEyeLight < -0.8)
+                    {
+                        float qwertz = (-dotEyeLight - 0.8) * 5.0;
+                        atmo += qwertz;
+                    }
+                    if(dotNormalEye < 0.2)
+                    {
+                        gl_FragColor = vec4(atmo, 1.0);
+                    }
+                    else
+                    {
+                        float salut = (dotNormalEye - 0.2) * 10.0;
+                        salut = salut < 0.0 ? 0.0 : salut;
+                        salut = salut > 1.0 ? 1.0 : salut;
+                        salut = sqrt(sqrt(salut));
+                        gl_FragColor = vec4(salut * color + (1.0 - salut) * atmo, 1.0);
+                    }
+                    // if(dotEyeLight < 0.2)
+                    // {
+                        // float qwertz = (-dotEyeLight - 0.8) * 5.0;
+                        // atmo += qwertz;
+                        // atmo = vec3(1.0, 1.0, 1.0);
+                        // gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+                    // }
                 }
                 else // sol
                 {
-                    gl_FragColor = vec4(texelColor.xyz, 1.0);  
+                    float dotNormalEye = dot(normalize(tbn[2]), normalize((-vPosition.xyz)));
+                    // gl_FragColor = vec4(texelColor.xyz, 1.0);  
+                    gl_FragColor = dotNormalEye * vec4(texelColor.xyz, 1.0) + (1.0 - dotNormalEye) * vec4(1.0, 1.0, 0.8, 1.0);
+                    // float dotNormalLight = dot(normalize(tbn[2]), L);
+                    // float dotNormalEye = dot(normalize(tbn[2]), normalize((-vPosition.xyz)));
+                    // vec4 atmo;
+                    // float sqne = sqrt(dotNormalEye * 5.0);
+                    // if(dotNormalLight > 0.1)
+                    // {
+                        // atmo = vec4(
+                                // sqne * 6.0 - 5.0,
+                                // sqne * 6.0 - 5.0,
+                                // sqne,
+                            // 1.0);
+                    // }
+                    // else if(dotNormalLight < -0.6)
+                    // {
+                        // atmo = vec4(0.0, 0.0, 0.0, 1.0);
+                    // }
+                    // else
+                    // {
+                        // float sqnl = sqrt(dotNormalLight * 10.0 / 7.0);
+                        // atmo = vec4(
+                                // sqne * sqnl * 0.8,
+                                // sqne * sqnl * 0.3,
+                                // 0.0,
+                            // 1.0);
+                    // }
+                    // if(dotNormalEye < 0.2)
+                    // {
+                        // gl_FragColor = atmo;
+                    // }
+                    // else
+                    // {
+                        // gl_FragColor = (1.0 - dotNormalEye) * vec4(color, 1.0) + dotNormalEye * atmo;
+                    // }
                 }
             }
         </script>
