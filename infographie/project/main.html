@@ -221,9 +221,9 @@
                             );
                     }
                     float dotEyeLight = dot(normalize((-vPosition.xyz)), L);
-                    if(dotEyeLight < -0.8)
+                    if(dotEyeLight < -0.9)
                     {
-                        float qwertz = (-dotEyeLight - 0.8) * 5.0;
+                        float qwertz = (-dotEyeLight - 0.9) * 10.0;
                         atmo += qwertz;
                     }
                     if(dotNormalEye < 0.2)
