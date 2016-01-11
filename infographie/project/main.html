@@ -12,6 +12,7 @@
         <script src="planet.js"></script>
         <script id="shader-vs" type="x-shader/x-vertex">
             const vec3 lightpos = vec3(0.0, 0.0, 0.0);
+            const float PI = 3.14159;
             
             attribute vec3 aVertexPosition;
             attribute vec2 aTextureCoord;
@@ -29,7 +30,6 @@
             uniform float inclination;
             
             varying vec3 vLightpos;
-            varying vec3 sun;
             varying vec2 vTextureCoord;
             varying vec4 vPosition;
             varying mat3 tbn;
@@ -38,7 +38,7 @@
             vec4 quat_from_axis_angle(vec3 axis, float angle)
             { 
               vec4 qr;
-              float half_angle = (angle * 0.5) * 3.14159 / 180.0;
+              float half_angle = (angle * 0.5) * PI / 180.0;
               qr.x = axis.x * sin(half_angle);
               qr.y = axis.y * sin(half_angle);
               qr.z = axis.z * sin(half_angle);
@@ -77,11 +77,25 @@
                 vec3 position = rotate_vertex_position(vertex * radius, vec3(1.0, 0.0, 0.0), 90.0 - inclination);
                 
                 vLightpos = (uMVMatrix * vec4(lightpos + offset, 1.0)).xyz;
-                vTextureCoord = aTextureCoord;            
+                
+                //texture coord
+                float u = 0.5 + atan(aVertexPosition.x, aVertexPosition.z) / 2.0 / PI;
+                float v = 0.5 + asin(aVertexPosition.y) / PI;
+                if(u > 0.9)
+                {
+                    u = atan(aVertexPosition.x + PI, aVertexPosition.z) / 2.0 / PI;
+                    v = 0.5 + asin(aVertexPosition.y) / PI;
+                }
+                if(u < 0.1)
+                {
+                    u = 1.0 + atan(aVertexPosition.x - PI, aVertexPosition.z) / 2.0 / PI;
+                    v = 0.5 + asin(aVertexPosition.y) / PI;
+                }
+                vTextureCoord = vec2(u, v);
                 
                 // TBN matrix for normals
                 vec3 normal = normalize((uNMatrix * vec4(position, 1.0)).xyz);
-                float theta = acos(position.z / radius) + 3.14159 / 2.0;
+                float theta = acos(position.z / radius) + PI / 2.0;
                 float phi = atan(position.y, position.x);
                 vec3 tangent = normalize((uNMatrix * 
                     vec4(
@@ -96,7 +110,6 @@
                 vPosition = uMVMatrix * vec4(position + center + offset, 1.0);
                 gl_Position = uPMatrix * vPosition;
                 
-                vec3 sun = -offset;
                 // http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-13-normal-mapping/
             }
         </script>
@@ -119,7 +132,6 @@
             uniform float rotationAtmo;
             
             varying vec3 vLightpos;
-            varying vec3 sun;
             varying vec2 vTextureCoord;
             varying vec4 vPosition;
             varying mat3 tbn;
@@ -248,9 +260,13 @@
                 }
                 else // sol
                 {
-                    float dotNormalEye = dot(normalize(tbn[2]), normalize((-vPosition.xyz)));
-                    // gl_FragColor = vec4(texelColor.xyz, 1.0);  
-                    gl_FragColor = dotNormalEye * vec4(texelColor.xyz, 1.0) + (1.0 - dotNormalEye) * vec4(1.0, 1.0, 0.8, 1.0);
+                    gl_FragColor = vec4(texelColor.xyz, 1.0);  
+                    
+                    
+                    // float dotNormalEye = dot(normalize(tbn[2]), normalize((-vPosition.xyz)));
+                    // gl_FragColor = dotNormalEye * vec4(texelColor.xyz, 1.0) + (1.0 - dotNormalEye) * vec4(1.0, 1.0, 0.8, 1.0);
+                    
+                    
                     // float dotNormalLight = dot(normalize(tbn[2]), L);
                     // float dotNormalEye = dot(normalize(tbn[2]), normalize((-vPosition.xyz)));
                     // vec4 atmo;
@@ -290,7 +306,7 @@
     </head>
     <body onload="initWebGL()">
         <canvas id="webgl-canvas" width="1500" height="1500">
-            HTML5 is not supported
+            nope
         </canvas>
         <aside>
             <div>

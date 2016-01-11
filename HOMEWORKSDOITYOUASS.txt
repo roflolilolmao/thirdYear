@@ -21,3 +21,13 @@ doc
 
 <c#>
 22janvier
+
+
+720x1280
+306 ppi => 120 pixels/cm
+6cm x 10.6cm
+60mm x 106mm
+2.5mm = 30 pixels
+2cm/s = 240 pixels/s
+20mm/s = 240 pixels/s
+240p / 1s = 240p / 1000ms = 12p / 50ms

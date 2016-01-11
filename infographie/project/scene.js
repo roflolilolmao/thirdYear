@@ -153,7 +153,7 @@ function drawScene()
     glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
     
     glContext.viewport(0, 0, c_width, c_height);
-    mat4.perspective(pMatrix, degToRad(60.0), c_width / c_height, 0.1, 10000.0);
+    mat4.perspective(pMatrix, degToRad(75.0), c_width / c_height, 0.1, 10000.0);
     translationMat = mat4.create();
     mat4.identity(translationMat);
     mat4.translate(translationMat, translationMat, [0.0, 0.0, translateZ]);
@@ -161,6 +161,7 @@ function drawScene()
     // mat4.translate(translationMat, translationMat, [-earthSystem.pos[0] / distanceFactor, -earthSystem.pos[1] / distanceFactor, -earthSystem.pos[2] / distanceFactor]);
     
     rotateModelViewMatrixUsingQuaternion();
+    
     glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
     mvtMatrix = mat4.create();
     mat4.multiply(mvtMatrix, translationMat, mvMatrix);
