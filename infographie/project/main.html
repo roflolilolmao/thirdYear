@@ -79,19 +79,7 @@
                 vLightpos = (uMVMatrix * vec4(lightpos + offset, 1.0)).xyz;
                 
                 //texture coord
-                float u = 0.5 + atan(aVertexPosition.x, aVertexPosition.z) / 2.0 / PI;
-                float v = 0.5 + asin(aVertexPosition.y) / PI;
-                if(u > 0.9)
-                {
-                    u = atan(aVertexPosition.x + PI, aVertexPosition.z) / 2.0 / PI;
-                    v = 0.5 + asin(aVertexPosition.y) / PI;
-                }
-                if(u < 0.1)
-                {
-                    u = 1.0 + atan(aVertexPosition.x - PI, aVertexPosition.z) / 2.0 / PI;
-                    v = 0.5 + asin(aVertexPosition.y) / PI;
-                }
-                vTextureCoord = vec2(u, v);
+                vTextureCoord = aTextureCoord;
                 
                 // TBN matrix for normals
                 vec3 normal = normalize((uNMatrix * vec4(position, 1.0)).xyz);
