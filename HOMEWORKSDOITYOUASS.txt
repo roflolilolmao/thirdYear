@@ -11,9 +11,11 @@ puscifer
 tp3 os
 <!-- projects -->
 <p3>
-white led
-test (roll roll paper / smartphone thing)
-doc
+WHITE LED
+TEST ROLL ROLL PAPER
+doc => manuel utilisateur (schémas éléctriques, installation sur pi)
+       IMAGES (démonstration du système d'acquisition)
+       la matrice de bayer c'est le bien
 <webgl>
 <android>
 <webdev>
