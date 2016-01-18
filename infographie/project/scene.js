@@ -8,7 +8,6 @@ var saturn;
 var uranus;
 var neptune;
 
-var planets = [];
 var earthSystem;
 var solarSystem;
 
@@ -29,10 +28,6 @@ var normalBuffersArray = [];
 var indexBuffersArray = [];
 
 var indicesArray = [];
-
-var textCoordsBuffer = null;
-var textCoords = [];
-var texColorTab = new Array();
 
 var mvMatrix = mat4.create();
 var pMatrix = mat4.create();
@@ -70,12 +65,15 @@ function initShaderParameters(prg)
     prg.nMatrixUniform          = glContext.getUniformLocation(prg, 'uNMatrix');
     prg.radius                  = glContext.getUniformLocation(prg, 'radius');
     prg.rotation                = glContext.getUniformLocation(prg, 'rotation');
+    prg.inclination             = glContext.getUniformLocation(prg, 'inclination');
     prg.rotationAtmo            = glContext.getUniformLocation(prg, 'rotationAtmo');
     prg.center                  = glContext.getUniformLocation(prg, 'center');
     prg.offset                  = glContext.getUniformLocation(prg, 'offset');
     prg.colorPlanet             = glContext.getUniformLocation(prg, 'uColor');
-    prg.fmode = glContext.getUniformLocation(prg, 'fmode');
-    prg.inclination = glContext.getUniformLocation(prg, 'inclination');
+    prg.fmode                   = glContext.getUniformLocation(prg, 'fmode');
+    prg.atmo                    = glContext.getUniformLocation(prg, 'uBoolAtmo');
+    prg.normal                  = glContext.getUniformLocation(prg, 'uBoolNormal');
+    prg.halo                  = glContext.getUniformLocation(prg, 'uHalo');
 }
 function initBuffers()
 {
@@ -88,46 +86,67 @@ function initBuffers()
     // tex
     glContext.bindBuffer(glContext.ARRAY_BUFFER, textureBuffersArray[0]);
     glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
-    
-    glContext.activeTexture(glContext.TEXTURE0);
-    glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[0]);
-    glContext.uniform1i(prg.colorTextureUniform, 0);
-    glContext.activeTexture(glContext.TEXTURE1);
-    glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[1]);
-    glContext.uniform1i(prg.normalTextureUniform, 1);
-    glContext.activeTexture(glContext.TEXTURE2);
-    glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[2]);
-    glContext.uniform1i(prg.specularTextureUniform, 2);
-    glContext.activeTexture(glContext.TEXTURE3);
-    glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[3]);
-    glContext.uniform1i(prg.earthNight, 3);
-    glContext.activeTexture(glContext.TEXTURE4);
-    glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[4]);
-    glContext.uniform1i(prg.atmosphere, 4);
-    glContext.activeTexture(glContext.TEXTURE5);
-    glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[5]);
-    glContext.uniform1i(prg.atmosphereNormals, 5);
-    glContext.activeTexture(glContext.TEXTURE6);
     // indices
     glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffersArray[0]);
 }
 function initScene()
 {
-    sol = createPlanet("Sol", 1988500, 0, 0, 0.1, [1, 1, 1], 0, 7.25, 0.0005, -0.0001);
-    mercury = createPlanet("Mercury", 0.3301, 38.86, 69.82, 0.01, [0.5, 0.3, 0.2], 10, 0.034, 0.01, 0);
-    venus = createPlanet("Venus", 4.8676, 34.79, 108.94, 0.015, [0.9, 0.9, 0.7], 20, 177.36, 0.001, -0.005);
-    earth = createPlanet("Earth", 5.9726, 29.29, 152.10, 0.02, [0.3, 0.5, 1.0], 30, 23.44, 0.0015, 0.0003);
-    moon = createPlanet("Moon", 0.07342, 0.964, 0.4055, 0.01, [0.8, 0.8, 0.8], 5, 6.68, 0.02, 0);
+    var solTab = [];
+    var mercuryTab = [];
+    var venusTab = [];
+    var earthTab = [];
+    var moonTab = [];
+    var marsTab = [];
+    var jupiterTab = [];
+    var saturnTab = [];
+    var uranusTab = [];
+    var neptuneTab = [];
     
-    mars = createPlanet("Mars", 0.64174, 21.97, 249.23, 0.01, [1.0, 0.0, 0.0], 40, 25.19, 0.015, 0.03);
-    jupiter = createPlanet("Jupiter", 1898.3, 12.44, 816.62, 0.08, [1.0, 0.5, 0.0], 80, 3.13, 0.015, 0.03);
-    saturn = createPlanet("Saturn", 568.36, 9.09, 1514.50, 0.06, [1.0, 1.0, 0.7], 200, 26.73, 0.015, 0.03);
-    uranus = createPlanet("Uranus", 86.816, 6.49, 3003.62, 0.05, [0.0, 1.0, 1.0], 550, 82.23, 0.015, 0.03);
-    neptune = createPlanet("Neptune", 102.42, 5.37, 4545.67, 0.05, [0.0, 0.0, 1.0], 1100, 1.76917, 0.015, 0.03);
+    initTextureWithImage("ressources/texMap2k_Sun_main.jpg", solTab);
+    initTextureWithImage("ressources/texMap2k_Sun_atmosphere.jpg", solTab);
+    
+    initTextureWithImage("ressources/texMap4k_Mercury_main.jpg", mercuryTab);
+    initTextureWithImage("ressources/texMap4k_Mercury_normal.jpg", mercuryTab);
+    
+    initTextureWithImage("ressources/texMap2k_Venus_atmosphere.jpg", venusTab);
+    
+    initTextureWithImage("ressources/texMap4k_Earth_main.jpg", earthTab);
+    initTextureWithImage("ressources/texMap4k_Earth_normal.jpg", earthTab);
+    initTextureWithImage("ressources/texMap4k_Earth_atmosphere.jpg", earthTab);
+    initTextureWithImage("ressources/texMap4k_Earth_atmosphere_normal.jpg", earthTab);
+    initTextureWithImage("ressources/earth_spec.jpg", earthTab);
+    initTextureWithImage("ressources/texMap4k_Earth_night.jpg", earthTab);
+    
+    initTextureWithImage("ressources/texMap4k_Moon_main.jpg", moonTab);
+    initTextureWithImage("ressources/texMap4k_Moon_normal.jpg", moonTab);
+    
+    initTextureWithImage("ressources/texMap4k_Mars_main.png", marsTab);
+    initTextureWithImage("ressources/texMap2k_Mars_normal.jpg", marsTab);
+    
+    initTextureWithImage("ressources/texMap4k_Jupiter_main.jpg", jupiterTab);
+    initTextureWithImage("ressources/texMap4k_Jupiter_normal.jpg", jupiterTab);
+    
+    initTextureWithImage("ressources/texMap2k_Saturn_main.jpg", saturnTab);
+    initTextureWithImage("ressources/texMap2k_Saturn_normal.jpg", saturnTab);
+    
+    initTextureWithImage("ressources/texMap2k_Uranus_main.jpg", uranusTab);
+    
+    initTextureWithImage("ressources/texMap2k_Neptune_main.jpg", neptuneTab);
+    
+    //    createPlanet(name, mass, speed, position, radius, inclination, deltaRot, deltaRotAtmo, texTab, boolNormal, boolHalo, boolAtmo)
+    sol = createPlanet("Sol", 1988500, 0, 0, 0.1, 7.25, 0.0005, -0.0001, {main:solTab[0], atmo:solTab[1]}, false, false, false);
+    mercury = createPlanet("Mercury", 0.3301, 38.86, 69.82, 0.01, 0.034, 0.0001, 0, {main:mercuryTab[0], normal:mercuryTab[1]}, true, false, false);
+    venus = createPlanet("Venus", 4.8676, 34.79, 108.94, 0.015, 177.36, 0.001, -0.003, {main:venusTab[0], atmo:venusTab[0]}, false, true, true);
+    earth = createPlanet("Earth", 5.9726, 29.29, 152.10, 0.02, 23.44, 0.0015, 0.0003, {main:earthTab[0], normal:earthTab[1], atmo:earthTab[2], atmoNormal:earthTab[3], spec:earthTab[4], night:earthTab[5]}, true, true, true);
+    moon = createPlanet("Moon", 0.07342, 0.964, 0.4055, 0.01, 6.68, 0.0015, 0, {main:moonTab[0], normal:moonTab[1]}, true, false, false);
+    mars = createPlanet("Mars", 0.64174, 21.97, 249.23, 0.01, 25.19, 0.0015, 0, {main:marsTab[0], normal:marsTab[1]}, true, true, false);
+    jupiter = createPlanet("Jupiter", 1898.3, 12.44, 816.62, 0.08, 3.13, 0.0015, 0, {main:jupiterTab[0], normal:jupiterTab[1]}, true, true, false);
+    saturn = createPlanet("Saturn", 568.36, 9.09, 1514.50, 0.06, 26.73, 0.0015, 0, {main:saturnTab[0], normal:saturnTab[1]}, true, true, false);
+    uranus = createPlanet("Uranus", 86.816, 6.49, 3003.62, 0.05, 82.23, 0.0015, 0, {main:uranusTab[0]}, false, true, false);
+    neptune = createPlanet("Neptune", 102.42, 5.37, 4545.67, 0.05, 1.76917, 0.0015, 0, {main:neptuneTab[0]}, false, true, false);
     
     earthSystem = new System(earth, [moon], sol);
-    planets = [mercury, venus, earthSystem, mars, jupiter, saturn, uranus, neptune];
-    solarSystem = new System(sol, planets, null);
+    solarSystem = new System(sol, [mercury, venus, earthSystem, mars, jupiter, saturn, uranus, neptune], null);
     
     // sources
     // http://nssdc.gsfc.nasa.gov/planetary/factsheet/mercuryfact.html
@@ -143,7 +162,7 @@ function initScene()
 function drawSystem()
 {
     solarSystem.draw();
-    if(orbitBool)solarSystem.drawOrbit();
+    // if(orbitBool)solarSystem.drawOrbit();
 }
 function drawScene()
 {
@@ -191,42 +210,6 @@ function drawScene()
 function loadRessources()
 {
     loadModel("ressources/earth.obj");
-    
-    // initTextureWithImage("ressources/texMap2k_Sun_main.jpg", texColorTab);
-    // initTextureWithImage("ressources/texMap2k_Sun_atmosphere.jpg", texColorTab);
-    
-    // initTextureWithImage("ressources/texMap4k_Mercury_main.jpg", texColorTab);
-    // initTextureWithImage("ressources/texMap4k_Mercury_normal.jpg", texColorTab);
-    
-    // initTextureWithImage("ressources/texMap2k_Venus_main.jpg", texColorTab);
-    // initTextureWithImage("ressources/texMap2k_Venus_normal.jpg", texColorTab);
-    // initTextureWithImage("ressources/texMap2k_Venus_atmosphere.jpg", texColorTab);
-    
-    initTextureWithImage("ressources/texMap4k_Earth_main.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap4k_Earth_normal.jpg", texColorTab);
-    initTextureWithImage("ressources/earth_spec.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap4k_Earth_night.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap4k_Earth_atmosphere.jpg", texColorTab);
-    initTextureWithImage("ressources/texMap4k_Earth_atmosphere_normal.jpg", texColorTab);
-    
-    // initTextureWithImage("ressources/texMap4k_Mars_main.png", texColorTab);
-    // initTextureWithImage("ressources/texMap2k_Mars_normal.jpg", texColorTab);
-    // initTextureWithImage("ressources/texMap2k_Mars_atmosphere.jpg", texColorTab);
-    
-    // initTextureWithImage("ressources/texMap4k_Jupiter_main.jpg", texColorTab);
-    // initTextureWithImage("ressources/texMap4k_Jupiter_normal.jpg", texColorTab);
-    // initTextureWithImage("ressources/texMap4k_Jupiter_atmosphere.jpg", texColorTab);
-    
-    // initTextureWithImage("ressources/texMap2k_Saturn_main.jpg", texColorTab);
-    // initTextureWithImage("ressources/texMap2k_Saturn_normal.jpg", texColorTab);
-    // initTextureWithImage("ressources/texMap2k_Saturn_atmosphere.jpg", texColorTab);
-    
-    // initTextureWithImage("ressources/texMap2k_Uranus_main.jpg", texColorTab);
-    // initTextureWithImage("ressources/texMap2k_Uranus_atmosphere.jpg", texColorTab);
-    
-    // initTextureWithImage("ressources/texMap2k_Neptune_main.jpg", texColorTab);
-    // initTextureWithImage("ressources/texMap2k_Neptune_atmosphere.jpg", texColorTab);
-    
 }
 function initWebGL()
 {

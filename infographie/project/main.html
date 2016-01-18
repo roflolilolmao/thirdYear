@@ -115,6 +115,9 @@
             uniform sampler2D uAtmosphereNormals;
             
             uniform int fmode;
+            uniform bool uBoolAtmo;
+            uniform bool uBoolNormal;
+            uniform bool uHalo;
             
             uniform float rotationAtmo;
             
@@ -139,154 +142,133 @@
             }
             void main(void)
             {
-                // Atmosphere
-                vec2 offsetAtmo = vec2(rotationAtmo, 0.0);
-                vec2 coordAtmo = vTextureCoord;
-                coordAtmo += offsetAtmo;
-                if(coordAtmo.x > 1.0) coordAtmo.x -= 1.0;
-                
-                vec3 texelColor = texture2D(uColorTexture, vTextureCoord).rgb;
-                if(fmode == 1) // earth
-                {
-                    vec3 texelAtmo = texture2D(uAtmosphere, coordAtmo).rgb;
-                    vec3 L = normalize(vLightpos - vPosition.xyz);
                     
-                    vec3 color;
-                    vec3 nightColor = vec3(0.0, 0.0, 0.0);
-                    if(texelAtmo.r > 0.75)
+                vec3 texelColor = texture2D(uColorTexture, vTextureCoord).rgb;
+                if(fmode != 0) // not sol, fmode == 2 => earth
+                {
+                    vec3 color = vec3(0.0, 0.0, 0.0);
+                    bool drawClouds = false;
+                    vec3 L = normalize(vLightpos - vPosition.xyz);
+                    // clouds    
+                    if(uBoolAtmo)
                     {                        
-                        // clouds
-                        vec3 texelAtmoNormal = texture2D(uAtmosphereNormals, coordAtmo).rgb * 2.0 - 1.0;
-                        color = colorFromTextures(texelAtmo, texelAtmoNormal, vec3(1.0, 1.0, 1.0), L);
+                        vec2 offsetAtmo = vec2(rotationAtmo, 0.0);
+                        vec2 coordAtmo = vTextureCoord;
+                        coordAtmo += offsetAtmo;
+                        if(coordAtmo.x > 1.0) coordAtmo.x -= 1.0;
+                        gl_FragColor = vec4(texelColor.xyz, 1.0);  
+                        vec3 texelAtmo = texture2D(uAtmosphere, coordAtmo).rgb;
+                            
+                        if(fmode == 2)
+                        { 
+                            if(texelAtmo.r > 0.75)
+                            {
+                                vec3 texelAtmoNormal = texture2D(uAtmosphereNormals, coordAtmo).rgb * 2.0 - 1.0;
+                                color = colorFromTextures(texelAtmo, texelAtmoNormal, vec3(1.0, 1.0, 1.0), L);
+                                drawClouds = true;
+                            }
+                        }
+                        else
+                        {
+                            color = colorFromTextures(texelAtmo, vec3(0.0, 0.0, 1.0), vec3(1.0, 1.0, 1.0), L);
+                            drawClouds = true;
+                        }
                     }
-                    else
+                    if(!drawClouds)
                     {
                         // ground
-                        vec3 texelNormal = texture2D(uNormalTexture, vTextureCoord).rgb * 2.0 - 1.0;
+                        vec3 texelNormal = uBoolNormal ? texture2D(uNormalTexture, vTextureCoord).rgb * 2.0 - 1.0 : vec3(0.0, 0.0, 1.0);
                         vec3 N = normalize(tbn * texelNormal);
                         float lambertTerm = dot(N, L);
-                        if (lambertTerm < 0.2)
+                        if (lambertTerm > 0.0)
+                        {
+                            vec3 texelSpecular = fmode == 2 ? texture2D(uSpecularTexture, vTextureCoord).rgb : vec3(1.0, 1.0, 1.0);
+                            color = colorFromTextures(texelColor, texelNormal, texelSpecular, L);
+                        }
+                        if (fmode == 2 && lambertTerm < 0.2)
                         {
                             vec3 texelNight = texture2D(uEarthNight, vTextureCoord).rgb;
                             float fade = lambertTerm > 0.0 ? 1.0 - lambertTerm * 5.0 : 1.0;
-                            nightColor = texelNight * length(texelNight) * fade / 1.5;
-                        }
-                        if (lambertTerm > 0.0)
-                        {
-                            vec3 texelSpecular = texture2D(uSpecularTexture, vTextureCoord).rgb;
-                            color = colorFromTextures(texelColor, texelNormal, texelSpecular, L);
+                            color += texelNight * length(texelNight) * fade / 1.5;
                         }
                     }
-                    color += nightColor;
                     
-                    float dotNormalLight = dot(normalize(tbn[2]), L);
-                    float dotNormalEye = dot(normalize(tbn[2]), normalize((-vPosition.xyz)));
-                    vec3 atmo;
-                    float sqne = sqrt(dotNormalEye * 5.0);
-                    if(dotNormalLight > 0.2)
+                    // ATMOSPHERE HALO
+                    if(uHalo)
                     {
-                        atmo = vec3(
-                                sqne * 6.0 - 5.0,
-                                sqne * 6.0 - 5.0,
-                                sqne
-                            );
-                    }
-                    else if(dotNormalLight < -0.2)
-                    {
-                        atmo = vec3(0.0, 0.0, 0.0);
-                    }
-                    else if(dotNormalLight > 0.0)
-                    {
-                        float sqnl = 0.5 * sqrt(1.0 - dotNormalLight * 5.0);
-                        float factor = 5.0 * dotNormalLight;
-                        atmo = (1.0 - factor) * vec3(
-                                sqne * sqnl * 0.8,
-                                sqne * sqnl * 0.15,
-                                0.0
-                            );
-                        atmo += factor * vec3(
-                                sqne * 6.0 - 5.0,
-                                sqne * 6.0 - 5.0,
-                                sqne
-                            );
+                        float dotNormalLight = dot(normalize(tbn[2]), L);
+                        float dotNormalEye = dot(normalize(tbn[2]), normalize((-vPosition.xyz)));
+                        vec3 atmo;
+                        float sqne = sqrt(dotNormalEye * 5.0);
+                        if(dotNormalLight > 0.2)
+                        {
+                            atmo = vec3(
+                                    sqne * 6.0 - 5.0,
+                                    sqne * 6.0 - 5.0,
+                                    sqne
+                                );
+                        }
+                        else if(dotNormalLight < -0.2)
+                        {
+                            atmo = vec3(0.0, 0.0, 0.0);
+                        }
+                        else if(dotNormalLight > 0.0)
+                        {
+                            float sqnl = 0.5 * sqrt(1.0 - dotNormalLight * 5.0);
+                            float factor = 5.0 * dotNormalLight;
+                            atmo = (1.0 - factor) * vec3(
+                                    sqne * sqnl * 0.8,
+                                    sqne * sqnl * 0.15,
+                                    0.0
+                                );
+                            atmo += factor * vec3(
+                                    sqne * 6.0 - 5.0,
+                                    sqne * 6.0 - 5.0,
+                                    sqne
+                                );
+                        }
+                        else
+                        {
+                            float sqnl = 0.5 - sqrt(-dotNormalLight * 5.0);
+                            atmo = vec3(
+                                    sqne * sqnl * 0.8,
+                                    sqne * sqnl * 0.15,
+                                    0.0
+                                );
+                        }
+                        float dotEyeLight = dot(normalize((-vPosition.xyz)), L);
+                        if(dotEyeLight < -0.9)
+                        {
+                            atmo += (-dotEyeLight - 0.9) * 10.0;
+                        }
+                        if(dotNormalEye < 0.2)
+                        {
+                            gl_FragColor = vec4(atmo, 1.0);
+                        }
+                        else
+                        {
+                            float salut = (dotNormalEye - 0.2) * 10.0;
+                            salut = salut < 0.0 ? 0.0 : salut;
+                            salut = salut > 1.0 ? 1.0 : salut;
+                            salut = sqrt(sqrt(salut));
+                            gl_FragColor = vec4(salut * color + (1.0 - salut) * atmo, 1.0);
+                        }   
                     }
                     else
                     {
-                        float sqnl = 0.5 - sqrt(-dotNormalLight * 5.0);
-                        atmo = vec3(
-                                sqne * sqnl * 0.8,
-                                sqne * sqnl * 0.15,
-                                0.0
-                            );
+                        gl_FragColor = vec4(color, 1.0);
                     }
-                    float dotEyeLight = dot(normalize((-vPosition.xyz)), L);
-                    if(dotEyeLight < -0.9)
-                    {
-                        float qwertz = (-dotEyeLight - 0.9) * 10.0;
-                        atmo += qwertz;
-                    }
-                    if(dotNormalEye < 0.2)
-                    {
-                        gl_FragColor = vec4(atmo, 1.0);
-                    }
-                    else
-                    {
-                        float salut = (dotNormalEye - 0.2) * 10.0;
-                        salut = salut < 0.0 ? 0.0 : salut;
-                        salut = salut > 1.0 ? 1.0 : salut;
-                        salut = sqrt(sqrt(salut));
-                        gl_FragColor = vec4(salut * color + (1.0 - salut) * atmo, 1.0);
-                    }
-                    // if(dotEyeLight < 0.2)
-                    // {
-                        // float qwertz = (-dotEyeLight - 0.8) * 5.0;
-                        // atmo += qwertz;
-                        // atmo = vec3(1.0, 1.0, 1.0);
-                        // gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-                    // }
                 }
                 else // sol
                 {
-                    gl_FragColor = vec4(texelColor.xyz, 1.0);  
+                    vec2 offsetAtmo = vec2(rotationAtmo, 0.0);
+                    vec2 coordAtmo = vTextureCoord;
+                    coordAtmo += offsetAtmo;
+                    if(coordAtmo.x > 1.0) coordAtmo.x -= 1.0;
+                    vec3 color = texelColor.xyz * 0.5 + 0.5 * texture2D(uAtmosphere, coordAtmo).rgb;
                     
-                    
-                    // float dotNormalEye = dot(normalize(tbn[2]), normalize((-vPosition.xyz)));
-                    // gl_FragColor = dotNormalEye * vec4(texelColor.xyz, 1.0) + (1.0 - dotNormalEye) * vec4(1.0, 1.0, 0.8, 1.0);
-                    
-                    
-                    // float dotNormalLight = dot(normalize(tbn[2]), L);
-                    // float dotNormalEye = dot(normalize(tbn[2]), normalize((-vPosition.xyz)));
-                    // vec4 atmo;
-                    // float sqne = sqrt(dotNormalEye * 5.0);
-                    // if(dotNormalLight > 0.1)
-                    // {
-                        // atmo = vec4(
-                                // sqne * 6.0 - 5.0,
-                                // sqne * 6.0 - 5.0,
-                                // sqne,
-                            // 1.0);
-                    // }
-                    // else if(dotNormalLight < -0.6)
-                    // {
-                        // atmo = vec4(0.0, 0.0, 0.0, 1.0);
-                    // }
-                    // else
-                    // {
-                        // float sqnl = sqrt(dotNormalLight * 10.0 / 7.0);
-                        // atmo = vec4(
-                                // sqne * sqnl * 0.8,
-                                // sqne * sqnl * 0.3,
-                                // 0.0,
-                            // 1.0);
-                    // }
-                    // if(dotNormalEye < 0.2)
-                    // {
-                        // gl_FragColor = atmo;
-                    // }
-                    // else
-                    // {
-                        // gl_FragColor = (1.0 - dotNormalEye) * vec4(color, 1.0) + dotNormalEye * atmo;
-                    // }
+                    float dotNormalEye = dot(normalize(tbn[2]), normalize((-vPosition.xyz)));
+                    gl_FragColor = dotNormalEye * dotNormalEye * vec4(color, 1.0) + (1.0 - dotNormalEye * dotNormalEye) * vec4(1.0, 1.0, 0.8, 1.0);
                 }
             }
         </script>
@@ -299,9 +281,9 @@
             <div>
                 <button onclick="pauseBoolF()">Play/pause</button>
             </div>
-            <div>
+            <!--<div>
                 <button onclick="orbitBoolF()">Show/hide orbits</button>
-            </div>
+            </div>-->
             <div class="clearfix">
                 <label>Time</label>
                 <input type="range" id="timeRange" value="1" min="1" max="1000" oninput="updateTimeFactor()"/>

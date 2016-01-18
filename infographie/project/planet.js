@@ -9,20 +9,22 @@ var MASS_FACTOR = 1e24 / ASTRONOMICAL_UNIT / ASTRONOMICAL_UNIT;
 var POSITION_FACTOR = 1e9 / ASTRONOMICAL_UNIT;
 var SPEED_FACTOR = 1 / ASTRONOMICAL_UNIT;
 
-function Planet(name, mass, speed, pos, radius, color, orbitFactor, inclination, deltaRot, deltaRotAtmo)
+function Planet(name, mass, speed, pos, radius, inclination, deltaRot, deltaRotAtmo, texTab, boolNormal, boolHalo, boolAtmo)
 {
     this.name = name;
     this.radius = radius;
     this.mass = mass;
     this.speed = speed;
-    this.color = color;
     this.pos = pos;
-    this.orbitFactor = orbitFactor;
     this.inclination = inclination;
     this.rotation = 0;
     this.rotationAtmo = 0;
     this.deltaRot = deltaRot;
     this.deltaRotAtmo = deltaRotAtmo;
+    this.texTab = texTab;
+    this.boolNormal = boolNormal;
+    this.boolHalo = boolHalo;
+    this.boolAtmo = boolAtmo;
 }
 Planet.prototype.update = function(mainBody)
 {
@@ -42,16 +44,6 @@ Planet.prototype.updateRotation = function()
 }
 Planet.prototype.draw = function(mainBodyPos)
 {
-    if(this.mass == sol.mass)
-    {
-        glContext.uniform1i(prg.fmode, 2);
-        glContext.uniform1i(prg.vmode, 2);
-    }
-    else
-    {
-        glContext.uniform1i(prg.fmode, 1);
-        glContext.uniform1i(prg.vmode, 1);
-    }
     var c = [
         (this.pos[0] + mainBodyPos[0]) / distanceFactor,
         (this.pos[1] + mainBodyPos[1]) / distanceFactor,
@@ -59,38 +51,71 @@ Planet.prototype.draw = function(mainBodyPos)
     ];
     glContext.uniform1f(prg.radius, this.radius / visualFactor);
     glContext.uniform1f(prg.rotation, this.rotation);
+    glContext.uniform1f(prg.inclination, this.inclination);
     glContext.uniform1f(prg.rotationAtmo, this.rotationAtmo);
-    glContext.uniform3f(prg.center, c[0], c[1], 0.0);
-    glContext.uniform3f(prg.colorPlanet, this.color[0], this.color[1], this.color[2]);
+    glContext.uniform3f(prg.center, c[0], c[1], c[2]);
+    
+    glContext.uniform1i(prg.atmo, this.boolAtmo);
+    glContext.uniform1i(prg.normal, this.boolNormal);
+    glContext.uniform1i(prg.halo, this.boolHalo);
     
     glContext.uniform1i(prg.fmode, 1);
-    glContext.uniform1f(prg.inclination, this.inclination);
     if(this.mass == sol.mass)
         glContext.uniform1i(prg.fmode, 0);
+    if(this.mass == earth.mass)
+        glContext.uniform1i(prg.fmode, 2);
+    
+    glContext.activeTexture(glContext.TEXTURE0);
+    glContext.bindTexture(glContext.TEXTURE_2D, this.texTab.main);
+    glContext.uniform1i(prg.colorTextureUniform, 0);
+    if(this.texTab.normal != null)
+    {
+        glContext.activeTexture(glContext.TEXTURE1);
+        glContext.bindTexture(glContext.TEXTURE_2D, this.texTab.normal);
+        glContext.uniform1i(prg.normalTextureUniform, 1);
+    }
+    if(this.texTab.atmo != null)
+    {
+        glContext.activeTexture(glContext.TEXTURE2);
+        glContext.bindTexture(glContext.TEXTURE_2D, this.texTab.atmo);
+        glContext.uniform1i(prg.atmosphere, 2);
+    }
+    if(this.name == 'Earth')
+    {
+        glContext.activeTexture(glContext.TEXTURE3);
+        glContext.bindTexture(glContext.TEXTURE_2D, this.texTab.night);
+        glContext.uniform1i(prg.earthNight, 3);
+        glContext.activeTexture(glContext.TEXTURE4);
+        glContext.bindTexture(glContext.TEXTURE_2D, this.texTab.spec);
+        glContext.uniform1i(prg.specularTextureUniform, 4);
+        glContext.activeTexture(glContext.TEXTURE5);
+        glContext.bindTexture(glContext.TEXTURE_2D, this.texTab.atmoNormal);
+        glContext.uniform1i(prg.atmosphereNormals, 5);
+    }
     
     glContext.drawElements(glContext.TRIANGLES, indicesArray[0].length, glContext.UNSIGNED_SHORT,0);
 }
-Planet.prototype.drawOrbit = function(mainBody)
-{
-    var s = vec3.create();
-    var p = vec3.create();
-    vec3.copy(s, this.speed);
-    vec3.copy(p, this.pos);
-    for(var j = 0; j < 50; j++)
-    {
-        var a = vec3.create();
-        var d = vec3.create(); // direction vector
-        vec3.subtract(d, mainBody.pos, p);
-        var dist = vec3.dist(mainBody.pos, p);
-        vec3.scale(a, d, mainBody.mass / (dist * dist * dist)); // dist ^ 3 for normalization
-        vec3.add(s, s, a);
-        var deltaPos = vec3.create();
-        vec3.scale(deltaPos, s, SPEED_FACTOR * this.orbitFactor * deltaT);
-        vec3.add(p, p, deltaPos);
-    }
+// Planet.prototype.drawOrbit = function(mainBody)
+// {
+    // var s = vec3.create();
+    // var p = vec3.create();
+    // vec3.copy(s, this.speed);
+    // vec3.copy(p, this.pos);
+    // for(var j = 0; j < 50; j++)
+    // {
+        // var a = vec3.create();
+        // var d = vec3.create(); // direction vector
+        // vec3.subtract(d, mainBody.pos, p);
+        // var dist = vec3.dist(mainBody.pos, p);
+        // vec3.scale(a, d, mainBody.mass / (dist * dist * dist)); // dist ^ 3 for normalization
+        // vec3.add(s, s, a);
+        // var deltaPos = vec3.create();
+        // vec3.scale(deltaPos, s, SPEED_FACTOR * this.orbitFactor * deltaT);
+        // vec3.add(p, p, deltaPos);
+    // }
     
     // glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
-}
+// }
 
 function System(orbitBody, bodies, mainBody)
 {
@@ -106,7 +131,6 @@ function System(orbitBody, bodies, mainBody)
     this.speed = orbitBody.speed;
     this.pos = orbitBody.pos;
     orbitBody.pos = [0, 0, 0];
-    this.orbitFactor = orbitBody.orbitFactor;
 }
 System.prototype = Object.create(Planet.prototype);
 System.prototype.constructor = System;
@@ -149,10 +173,10 @@ function newtonGravitation(mainBody, orbitBody)
     vec3.scale(deltaPos, orbitBody.speed, SPEED_FACTOR * deltaT);
     vec3.add(orbitBody.pos, orbitBody.pos, deltaPos);
 }
-function createPlanet(name, mass, speed, position, radius, color, orbitFactor, inclination, deltaRot, deltaRotAtmo)
+function createPlanet(name, mass, speed, position, radius, inclination, deltaRot, deltaRotAtmo, texTab, boolNormal, boolHalo, boolAtmo)
 {
     var m = MASS_FACTOR * mass * G;
     var s = -speed * 1e3;
     var p = POSITION_FACTOR * position;
-    return new Planet(name, m, [s, 0, 0], [0, p, 0], radius, color, orbitFactor, inclination, deltaRot, deltaRotAtmo);
+    return new Planet(name, m, [s, 0, 0], [0, p, 0], radius, inclination, deltaRot, deltaRotAtmo, texTab, boolNormal, boolHalo, boolAtmo);
 }
