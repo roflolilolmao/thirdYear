@@ -1,8 +1,6 @@
 var deltaT = 24 * 60 * 10;
-// var deltaT = 1;
 var ASTRONOMICAL_UNIT = 149597870700;
 var G = 6.67e-11;
-// var G = 1;
 var distanceFactor = 10;
 var visualFactor = 1;
 var MASS_FACTOR = 1e24 / ASTRONOMICAL_UNIT / ASTRONOMICAL_UNIT;

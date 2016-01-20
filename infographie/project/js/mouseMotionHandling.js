@@ -69,34 +69,22 @@ function rotateModelViewMatrixUsingQuaternion(stop) {
 	rx = degToRad(rotX);
 	ry = degToRad(rotY);
 	
-	// rotXQuat = quat.create();
-	// quat.setAxisAngle(rotXQuat, [1, 0, 0], rx);
+	rotXQuat = quat.create();
+	quat.setAxisAngle(rotXQuat, [1, 0, 0], rx);
 		
-	// rotYQuat = quat.create();
-	// quat.setAxisAngle(rotYQuat, [0, 1, 0], ry);
+	rotYQuat = quat.create();
+	quat.setAxisAngle(rotYQuat, [0, 1, 0], ry);
 		
-	// myQuaternion = quat.create();
-	// quat.multiply(myQuaternion, rotYQuat, rotXQuat);
+	myQuaternion = quat.create();
+	quat.multiply(myQuaternion, rotYQuat, rotXQuat);
 		
 	rotationMatrix = mat4.create();
-    rotXM = mat4.create();
-    rotYM = mat4.create();
 	mat4.identity(rotationMatrix);
-	mat4.identity(rotXM);
-	mat4.identity(rotYM);
-    
-    mat4.rotateX(rotXM, rotXM, rx);
-    mat4.rotateY(rotYM, rotYM, ry);
-    
-    mat4.multiply(rotationMatrix, rotXM, rotYM);
-    
-	// mat4.fromQuat(rotationMatrix, myQuaternion);
-	// mat4.multiply(mvMatrix, rotationMatrix, mvMatrix);
-    mat4.identity(mvMatrix);
-    mat4.multiply(mvMatrix, rotYM, rotXM);
+	mat4.fromQuat(rotationMatrix, myQuaternion);
+	mat4.multiply(mvMatrix, rotationMatrix, mvMatrix);
 	//reset rotation values, otherwise rotation accumulates
 	if(stop){
-		// rotX = 0.;
-		// rotY = 0.;
+		rotX = 0.;
+		rotY = 0.;
 	}
 }
