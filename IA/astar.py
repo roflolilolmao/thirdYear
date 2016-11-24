@@ -14,8 +14,8 @@ def constructPath(path, current):
     t = [current]
     while current in path:
         current = path[current]
-        t[len(t):] = [current]
-    return t[::-1]
+        t[:0] = [current]
+    return t
 
 
 def astar(cities, links, start, end, hfunction):
@@ -28,7 +28,7 @@ def astar(cities, links, start, end, hfunction):
         i += 1
         current = min(open_, key=score.get)
         if current == end:
-            print(i)
+            # print(i)
             return constructPath(path, end)
         open_.remove(current)
         closed.append(current)
@@ -79,14 +79,11 @@ def printpath(path, links, i):
 
 
 def findUnadmissiblePaths(cities, links, h):
-    c = cities.keys()
-    for i in c:
-        for j in c:
+    for i in cities.keys():
+        for j in cities.keys():
             if i != j:
-                paths = {}
                 unadmissible = False
-                for k in h:
-                    paths[k] = astar(cities, links, i, j, k)
+                paths = {k: astar(cities, links, i, j, k) for k in h}
                 for k, p in paths.items():
                     for l, q in paths.items():
                         if k != l and len(p) != len(q):
@@ -102,8 +99,8 @@ def main():
         with open('positions.txt', 'r') as fpos:
             cities, links = parseFiles(fconn, fpos)
     h = [dijkstra, dist_x, dist_y, euclid, manhattan]
-    astar(cities, links, 'Berlin', 'Lisbon', dijkstra)
-    # findUnadmissiblePaths(cities, links, h)
+    # astar(cities, links, 'Berlin', 'Lisbon', dijkstra)
+    findUnadmissiblePaths(cities, links, h)
 
 
 if __name__ == '__main__':
