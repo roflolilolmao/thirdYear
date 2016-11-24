@@ -18,29 +18,32 @@ def constructPath(path, current):
     return t[::-1]
 
 
-def astar(c, l, start, end, hfunction):
+def astar(cities, links, start, end, hfunction):
     closed = []
-    ope = [start]
+    open_ = [start]
     path = {}
-    score = {start: (hfunction(c[start], c[end]), 0)}
-    while ope:
-        current = min(ope, key=score.get)
+    score = {start: (hfunction(cities[start], cities[end]), 0)}
+    i = 0
+    while open_:
+        i += 1
+        current = min(open_, key=score.get)
         if current == end:
+            print(i)
             return constructPath(path, end)
-        ope.remove(current)
+        open_.remove(current)
         closed.append(current)
-        neigh = {i[1]: int(i[2]) for i in l if i[0] == current}
-        neigh.update({i[0]: int(i[2]) for i in l if i[1] == current})
-        for key, value in neigh.items():
-            if key in closed:
+        neigh = {i[1]: int(i[2]) for i in links if i[0] == current}
+        neigh.update({i[0]: int(i[2]) for i in links if i[1] == current})
+        for city, distance_to in neigh.items():
+            if city in closed:
                 continue
-            g = value + score[current][1]
-            if key not in ope:
-                ope.append(key)
-            elif g >= score[key][1]:
+            distance_from_start = distance_to + score[current][1]
+            if city not in open_:
+                open_.append(city)
+            elif distance_from_start >= score[city][1]:
                 continue
-            path[key] = current
-            score[key] = (g + hfunction(c[key], c[end]), g)
+            path[city] = current
+            score[city] = (distance_from_start + hfunction(cities[city], cities[end]), distance_from_start)
     return None
 
 
@@ -99,7 +102,8 @@ def main():
         with open('positions.txt', 'r') as fpos:
             cities, links = parseFiles(fconn, fpos)
     h = [dijkstra, dist_x, dist_y, euclid, manhattan]
-    findUnadmissiblePaths(cities, links, h)
+    astar(cities, links, 'Berlin', 'Lisbon', dijkstra)
+    # findUnadmissiblePaths(cities, links, h)
 
 
 if __name__ == '__main__':
